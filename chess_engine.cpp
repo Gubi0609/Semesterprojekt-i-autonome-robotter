@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstdint>
 #include <string>
+#include <cctype>
 
 using namespace std;
 
@@ -98,30 +99,6 @@ char getPieceAtSquare(const int bitSquare){
     return '.'; // Empty square
 }
 
-string checkOccupancy(const string square){
-    // Function that checks if a square is occupied and returns the bitBoard of the piece on the square.
-
-    int bitIndex = squareToBitIndex(square);
-    Bitboard mask = 1ULL << bitIndex;
-
-    if (whitePawns & mask) return "wP";
-    if (whiteKnights & mask) return "wN";
-    if (whiteBishops & mask) return "wB";
-    if (whiteRooks & mask) return "wR";
-    if (whiteQueens & mask) return "wQ";
-    if (whiteKing & mask) return "wK";
-    
-    if (blackPawns & mask) return "bP";
-    if (blackKnights & mask) return "bN";
-    if (blackBishops & mask) return "bB";
-    if (blackRooks & mask) return "bR";
-    if (blackQueens & mask) return "bQ";
-    if (blackKing & mask) return "bK";
-
-    return ""; // Empty square
-
-}
-
 void printSingleBitboard(uint64_t &board) {
     for (int rank = 7; rank >= 0; rank--) {
         for (int file = 0; file < 8; file++) {
@@ -149,12 +126,64 @@ void printBoard(){
 
 }
 
-
 void movePiece(uint64_t &bitboard, string from, string to){
     // Function that moves a piece from one square to another.
     
     int fromIndex = squareToBitIndex(from); // Find the bitindex of the square the piece is moving from.
     int toIndex = squareToBitIndex(to); // Find the bitindex of the square the piece is moving to.
+
+    char pieceAtToSquare = getPieceAtSquare(toIndex);
+
+    if (whiteToMove && isupper(pieceAtToSquare)){
+        cout << "Invalid move!" << "\n";
+        return;
+    }
+    else if (whiteToMove && islower(pieceAtToSquare)){
+        if (pieceAtToSquare == 'p'){
+            blackPawns &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'n'){
+            blackKnights &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'b'){
+            blackBishops &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'r'){
+            blackRooks &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'q'){
+            blackQueens &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'k'){
+            blackKing &= ~(1ULL << toIndex);
+        }
+    }
+    
+    if (!whiteToMove && islower(pieceAtToSquare)){
+        cout << "Invalid move!" << "\n";
+        return;
+    }
+    else if (!whiteToMove && isupper(pieceAtToSquare)){
+        if (pieceAtToSquare == 'P'){
+            whitePawns &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'N'){
+            whiteKnights &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'B'){
+            whiteBishops &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'R'){
+            whiteRooks &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'Q'){
+            whiteQueens &= ~(1ULL << toIndex);
+        }
+        else if (pieceAtToSquare == 'K'){
+            whiteKing &= ~(1ULL << toIndex);
+        }
+    }
+
 
     bitboard &= ~(1ULL << fromIndex); // Remove piece from "from" square
     bitboard |= (1ULL << toIndex);    // Place piece on "to" square
@@ -164,65 +193,67 @@ int main() {
 
     string input;
 
-    printBoard();
-    movePiece(whiteKnights, "b1", "c3");
-    printBoard();
+    while(true){
+        printBoard();
+        cout << (whiteToMove ? "White" : "Black") << " to move: ";
+        cin >> input;
 
-    // while(true){
-    // printBoard();
-    // cout << (whiteToMove ? "White" : "Black") << " to move: ";
-    // cin >> input;
+    string fromSquare = input.substr(0, 2);
+    string toSquare = input.substr(2, 2);
 
-    // string fromSquare = input.substr(0, 2);
-    // string toSquare = input.substr(2, 2);
+    int fromIndex = squareToBitIndex(fromSquare);
 
-    // string pieceTypeToMove = checkOccupancy(fromSquare);
+    char pieceTypeToMove = getPieceAtSquare(fromIndex);
 
-    // if(pieceTypeToMove != ""){
-    //    if (pieceTypeToMove == "wP"){
-    //     movePiece(whitePawns, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "wN"){
-    //     movePiece(whiteKnights, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "wB"){
-    //     movePiece(whiteBishops, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "wR"){
-    //     movePiece(whiteRooks, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "wQ"){
-    //     movePiece(whiteQueens, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "wK"){
-    //     movePiece(whiteKing, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "bP"){
-    //     movePiece(blackPawns, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "bN"){
-    //     movePiece(blackKnights, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "bB"){
-    //     movePiece(blackBishops, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "bR"){
-    //     movePiece(blackRooks, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "bQ"){
-    //     movePiece(blackQueens, fromSquare, toSquare);
-    // }
-    // else if (pieceTypeToMove == "bK"){
-    //     movePiece(blackKing, fromSquare, toSquare);
-    // }
+    cout << "Before: " << whiteKnights << "\n";
 
-    // whiteToMove = !whiteToMove;
+    if(pieceTypeToMove != '.'){
+        if (pieceTypeToMove == 'P'){
+         movePiece(whitePawns, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'N'){
+         movePiece(whiteKnights, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'B'){
+        movePiece(whiteBishops, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'R'){
+        movePiece(whiteRooks, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'Q'){
+        movePiece(whiteQueens, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'K'){
+        movePiece(whiteKing, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'p'){
+        movePiece(blackPawns, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'n'){
+        movePiece(blackKnights, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'b'){
+        movePiece(blackBishops, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'r'){
+        movePiece(blackRooks, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'q'){
+        movePiece(blackQueens, fromSquare, toSquare);
+    }
+    else if (pieceTypeToMove == 'k'){
+        movePiece(blackKing, fromSquare, toSquare);
+    }
 
-    // }
-    // else{
-    //     cout << "Invalid move!" << "\n";
-    // }
-    // }
+    whiteToMove = !whiteToMove;
+
+    cout << "After: " << whiteKnights << "\n";
+
+    }
+    else{
+        cout << "Invalid move!" << "\n";
+    }
+    }
 
     return 0;
 }
