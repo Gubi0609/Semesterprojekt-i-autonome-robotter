@@ -16,7 +16,7 @@ bool whiteToMove = true;
 // Bitboards for brikkerne
 typedef uint64_t Bitboard;
 
-Bitboard whitePawns = 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000; // Rank 2 0x000000000000FF00
+Bitboard whitePawns = 0x000000000000FF00; // Rank 2 0x000000000000FF00 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000
 Bitboard whiteKnights = 0x00000000000042; // b1 og g1
 Bitboard whiteBishops = 0x0000000000000024; // c1 og f1
 Bitboard whiteRooks = 0x0000000000000081; // a1 og h1
