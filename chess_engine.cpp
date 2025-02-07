@@ -16,7 +16,7 @@ bool whiteToMove = true;
 // Bitboards for brikkerne
 typedef uint64_t Bitboard;
 
-Bitboard whitePawns = 0x000000000000FF00; // Rank 2
+Bitboard whitePawns = 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000; // Rank 2 0x000000000000FF00
 Bitboard whiteKnights = 0x00000000000042; // b1 og g1
 Bitboard whiteBishops = 0x0000000000000024; // c1 og f1
 Bitboard whiteRooks = 0x0000000000000081; // a1 og h1
@@ -49,8 +49,8 @@ Bitboard blackKing = 0x1000000000000000; // e8
 // If a bit is 1, a piece is on that square.
 // If a bit is 0, the square is empty.
 
-// For example, the bitboard for white pawns is 0x00FF000000000000. 0x00FF000000000000 is a hexadecimal representation of the bitboard.
-// In binary, 0x00FF000000000000 is 00000000 11111111 00000000 00000000 00000000 00000000 00000000 00000000:
+// For example, the bitboard for white pawns is 0x000000000000FF00. 0x000000000000FF00 is a hexadecimal representation of the bitboard.
+// In binary, 0x000000000000FF00 is 00000000 00000000 00000000 00000000 00000000 00000000 11111111 00000000:
 
 // 8  0 0 0 0 0 0 0 0
 // 7  0 0 0 0 0 0 0 0
@@ -257,3 +257,5 @@ int main() {
 
     return 0;
 }
+
+// Test test test
