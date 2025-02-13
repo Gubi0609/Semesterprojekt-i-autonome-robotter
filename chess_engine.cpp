@@ -3,7 +3,6 @@
 // Jeg vil også gerne have en funktion, der kan tjekke om et træk er lovligt.
 // Jeg repræsenterer brikkerne gennem BitBoards.
 
-
 #include <iostream>
 #include <cstdint>
 #include <string>
@@ -16,7 +15,7 @@ bool whiteToMove = true;
 // Bitboards for brikkerne
 typedef uint64_t Bitboard;
 
-Bitboard whitePawns = 0x000000000000FF00; // Rank 2 0x000000000000FF00 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000
+Bitboard whitePawns = 0x000000000000FF00; // Rank 2
 Bitboard whiteKnights = 0x00000000000042; // b1 og g1
 Bitboard whiteBishops = 0x0000000000000024; // c1 og f1
 Bitboard whiteRooks = 0x0000000000000081; // a1 og h1
@@ -100,6 +99,8 @@ char getPieceAtSquare(const int bitSquare){
 }
 
 void printSingleBitboard(uint64_t &board) {
+    // Function that prints a single bitboard.
+
     for (int rank = 7; rank >= 0; rank--) {
         for (int file = 0; file < 8; file++) {
             int square = rank * 8 + file;
@@ -111,6 +112,7 @@ void printSingleBitboard(uint64_t &board) {
 }
 
 void printBoard(){
+    // Function that prints the chessboard.
 
     for(int row = 7; row >= 0; row--){
         cout << (row + 1) << "| ";
@@ -195,43 +197,41 @@ void movePieceByType(int fromIndex, int toIndex){
     if(pieceTypeToMove != '.'){
         if (pieceTypeToMove == 'P'){
          movePiece(whitePawns, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'N'){
-         movePiece(whiteKnights, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'B'){
+        }
+        else if (pieceTypeToMove == 'N'){
+            movePiece(whiteKnights, fromIndex, toIndex);
+     }
+        else if (pieceTypeToMove == 'B'){
         movePiece(whiteBishops, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'R'){
-        movePiece(whiteRooks, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'Q'){
-        movePiece(whiteQueens, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'K'){
-        movePiece(whiteKing, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'p'){
-        movePiece(blackPawns, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'n'){
-        movePiece(blackKnights, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'b'){
-        movePiece(blackBishops, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'r'){
-        movePiece(blackRooks, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'q'){
-        movePiece(blackQueens, fromIndex, toIndex);
-    }
-    else if (pieceTypeToMove == 'k'){
-        movePiece(blackKing, fromIndex, toIndex);
-    }
-
+        }
+        else if (pieceTypeToMove == 'R'){
+            movePiece(whiteRooks, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'Q'){
+            movePiece(whiteQueens, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'K'){
+            movePiece(whiteKing, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'p'){
+            movePiece(blackPawns, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'n'){
+            movePiece(blackKnights, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'b'){
+            movePiece(blackBishops, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'r'){
+            movePiece(blackRooks, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'q'){
+            movePiece(blackQueens, fromIndex, toIndex);
+        }
+        else if (pieceTypeToMove == 'k'){
+            movePiece(blackKing, fromIndex, toIndex);
+        }
     whiteToMove = !whiteToMove;
-
     }
     else{
         cout << "Invalid move!" << "\n";
