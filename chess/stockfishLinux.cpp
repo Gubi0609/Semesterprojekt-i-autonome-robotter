@@ -1,11 +1,12 @@
 #ifndef _WIN32
 
-#include "Stockfish.h"
+#include "stockfish.h"
 #include <iostream>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <cstring>
+#include <sstream>
 
 class StockfishLinux : public Stockfish {
 private:
@@ -21,13 +22,30 @@ private:
         char buffer[256];
         std::string output;
         ssize_t bytesRead;
-        
+
         while ((bytesRead = read(stockfishOut[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
             output += buffer;
-            if (output.find("bestmove") != std::string::npos) break;
+            if (output.find("bestmove") != std::string::npos) {
+                break;
+            }
         }
-        return output;
+
+        // Extract the "bestmove" line
+        std::string bestMove;
+        std::istringstream stream(output);
+        std::string line;
+        while (std::getline(stream, line)) {
+            if (line.find("bestmove") != std::string::npos) {
+                std::istringstream bestMoveStream(line);
+                std::string token;
+                bestMoveStream >> token; // Skip "bestmove"
+                bestMoveStream >> bestMove; // Get the actual move
+                break;
+            }
+        }
+
+        return bestMove;
     }
 
 public:

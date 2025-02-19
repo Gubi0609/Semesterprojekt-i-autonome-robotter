@@ -5,8 +5,10 @@ int main() {
 #ifdef _WIN32
     std::string stockfishPath = "stockfish-windows-x86-64-avx2.exe";
 #else
-    std::string stockfishPath = "/usr/bin/stockfish";
+    std::string stockfishPath = "./stockfish-ubuntu-x86-64-sse41-popcnt";
 #endif
+
+    std::cout << "Stockfish path: " << stockfishPath << std::endl;
 
     Stockfish* engine = createStockfishInstance(stockfishPath);
 
