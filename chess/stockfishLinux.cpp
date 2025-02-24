@@ -32,6 +32,14 @@ StockfishLinux::StockfishLinux(const string& stockfishPath) {
 
     close(stockfishIn[0]);
     close(stockfishOut[1]);
+
+    // Write "uci" and "isready" commands to Stockfish
+    writeToStockfish("uci");
+    writeToStockfish("isready");
+
+    // Wait for Stockfish to be ready
+    // TODO
+    
 }
 
 bool StockfishLinux::writeToStockfish(const string& command) {
@@ -47,7 +55,7 @@ string StockfishLinux::readFromStockfish(){
         while ((bytesRead = read(stockfishOut[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
             output += buffer;
-            if (output.find("bestmove") != std::string::npos) {
+            if (output.find("bestmove") != std::string::npos) { // TODO check for uciok, readyok and legalmoves
                 break;
             }
         }
@@ -74,6 +82,8 @@ string StockfishLinux::getBestMove(const string& position){
     writeToStockfish("go depth 20");
     return readFromStockfish();
 }
+
+// TODO add legalmoves function
 
 StockfishLinux::~StockfishLinux() {
     writeToStockfish("quit");
