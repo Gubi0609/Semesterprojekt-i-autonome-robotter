@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <cstring>
 #include <sstream>
+#include <vector>
 
 using namespace std;
 
@@ -37,53 +38,111 @@ StockfishLinux::StockfishLinux(const string& stockfishPath) {
     writeToStockfish("uci");
     writeToStockfish("isready");
 
-    // Wait for Stockfish to be ready
-    // TODO
-    
+    waitForReady();
 }
 
 bool StockfishLinux::writeToStockfish(const string& command) {
-    std::string cmd = command + "\n";
+    string cmd = command + "\n";
     return write(stockfishIn[1], cmd.c_str(), cmd.size()) != -1;
 }
 
-string StockfishLinux::readFromStockfish(){
-    char buffer[256];
-        std::string output;
-        ssize_t bytesRead;
+void StockfishLinux::waitForReady() {
+    char buffer[4096];  // A larger buffer to avoid truncation
+    string output;
+    ssize_t bytesRead;
 
-        while ((bytesRead = read(stockfishOut[0], buffer, sizeof(buffer) - 1)) > 0) {
-            buffer[bytesRead] = '\0';
-            output += buffer;
-            if (output.find("bestmove") != std::string::npos) { // TODO check for uciok, readyok and legalmoves
-                break;
+    // Collect output from Stockfish until it's ready
+    while (true) {
+        bytesRead = read(stockfishOut[0], buffer, sizeof(buffer) - 1);
+        if (bytesRead <= 0) {
+            break;  // Exit if no data is read
+        }
+
+        buffer[bytesRead] = '\0';
+        output += buffer;
+
+        // Check for the "readyok" response to ensure Stockfish is ready
+        if (output.find("readyok") != string::npos) {
+            break;  // Exit the loop when Stockfish signals readiness
+        }
+    }
+}
+
+string StockfishLinux::readFromStockfish() {
+    char buffer[4096];  // A larger buffer to avoid truncation
+    string output;
+    ssize_t bytesRead;
+    string legalMoves;
+    string bestMove;
+
+    // Collect full output first
+    cout << "Reading from Stockfish ..." << endl;
+    while ((bytesRead = read(stockfishOut[0], buffer, sizeof(buffer) - 1)) > 0) {
+        buffer[bytesRead] = '\0';
+        output += buffer;
+        // Check for the presence of bestmove
+        if (output.find("bestmove") != string::npos) {
+            istringstream stream(output);
+            string line;
+            while (getline(stream, line)) {
+                if (line.find("bestmove") == 0) {
+                    istringstream bestMoveStream(line);
+                    string keyword;
+                    bestMoveStream >> keyword >> bestMove;
+                    return bestMove;  // Return immediately once found
+                }
             }
         }
 
-        // Extract the "bestmove" line
-        std::string bestMove;
-        std::istringstream stream(output);
-        std::string line;
-        while (std::getline(stream, line)) {
-            if (line.find("bestmove") != std::string::npos) {
-                std::istringstream bestMoveStream(line);
-                std::string token;
-                bestMoveStream >> token; // Skip "bestmove"
-                bestMoveStream >> bestMove; // Get the actual move
-                break;
+        // Parse the legal moves
+        if (output.find(": 1") != string::npos) {
+            istringstream stream(output);
+            string line;
+            while (getline(stream, line)) {
+                if (line.find(":") != string::npos) {  // Look for lines that look like "a2a3"
+                    string move = line.substr(0, line.find(':'));  // Extract the move before ":"
+                    
+                    // Check if the move is a valid chess move (like a2a3, b2b3, etc.)
+                    if (move.size() == 4 && isalpha(move[0]) && isdigit(move[1]) &&
+                        isalpha(move[2]) && isdigit(move[3])) {
+                        legalMoves += move + " ";
+                    }
+                }
             }
         }
 
-        return bestMove;
+        if(output.find("Nodes searched") != string::npos){
+            return legalMoves;
+        }
+    }
+
+    cout << "Finished reading from Stockfish" << endl;
+    return "";
 }
 
 string StockfishLinux::getBestMove(const string& position){
     writeToStockfish("position startpos moves " + position);
     writeToStockfish("go depth 20");
+    
     return readFromStockfish();
 }
 
-// TODO add legalmoves function
+vector<string> StockfishLinux::getLegalMoves(const string& position){
+    writeToStockfish("position startpos moves " + position);
+    writeToStockfish("go perft 1");
+    cout << "Searching for legal moves ..." << endl;
+
+    string legalMovesStr = readFromStockfish();  // Get space-separated moves
+    vector<string> legalMoves;
+    istringstream stream(legalMovesStr);
+    string move;
+
+    while (stream >> move) {  // Split string into moves
+        legalMoves.push_back(move);
+    }
+
+    return legalMoves;  // Return vector of moves
+}
 
 StockfishLinux::~StockfishLinux() {
     writeToStockfish("quit");

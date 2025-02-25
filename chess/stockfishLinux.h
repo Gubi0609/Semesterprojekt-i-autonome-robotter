@@ -1,5 +1,5 @@
-#include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -10,6 +10,7 @@ class StockfishLinux {
         StockfishLinux();
         StockfishLinux(const string&);
         string getBestMove(const string&);
+        vector<string> getLegalMoves(const string&);
         ~StockfishLinux();
 
     private:
@@ -18,6 +19,7 @@ class StockfishLinux {
         pid_t pid;
 
         bool writeToStockfish(const string& command);
+        void waitForReady();
         string readFromStockfish();
 
 };
