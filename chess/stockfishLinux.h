@@ -14,9 +14,9 @@ class StockfishLinux {
         ~StockfishLinux();
 
     private:
-        int stockfishIn[2]; 
-        int stockfishOut[2];
-        pid_t pid;
+        int stockfishIn[2]; // Pipe for sending commands to Stockfish. Array of 2 integers.
+        int stockfishOut[2]; // Pipe for reading output from Stockfish. Array of 2 integers.
+        pid_t pid; // Process ID of the Stockfish engine.
 
         bool writeToStockfish(const string& command);
         void waitForReady();
