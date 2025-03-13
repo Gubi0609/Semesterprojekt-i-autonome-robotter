@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
+#include <string.h>
 
 // Definér tydelige tilstande
 enum State {
@@ -15,7 +16,7 @@ struct Point {
     bool last;          // Forrige værdi
     int row;            // Række-position
     int col;            // Kolonne-position
-    bool lys;           // LED status (tændt/slukket)
+    bool lys;           // LED-status (tændt/slukket)
 };
 
 const int numRows = 8;
@@ -68,7 +69,7 @@ void clearLights(Point matrix[numRows][numCols]) {
 }
 
 int main() {
-    stdio_init_all();
+    stdio_init_all();  // Initialiser USB CDC
     initPins();
     
     // Opret og initialiser en 8x8 matrix af Point-objekter
@@ -111,15 +112,36 @@ int main() {
 
                 // Hvis der sker en ændring i input (evt. med tilføjet debouncing)
                 if (matrix[row][col].current != matrix[row][col].last) {
-                    // Overvej at tilføje en kort forsinkelse her for at debounc'e
                     if (state == INITIALIZE) {
-                        // Initialiser tilstand
                         state = WAITING_FOR_FIRST;
                     }
                     else if (state == WAITING_FOR_FIRST) {
-                        // Første tryk registreret
+                        // Første tryk registreret: gem koordinater
                         first_col = matrix[row][col].col;
                         first_row = matrix[row][col].row;
+                        
+                        // SEND MOVES TIL MAIN: send koordinater via USB til PC
+                        printf("MOVE:%d,%d\n", first_row, first_col);
+                        
+                        // Vent på svar fra PC (samler tegn indtil newline eller timeout)
+                        char response[64];
+                        int i = 0;
+                        while (true) {
+                            int ch = getchar_timeout_us(1000000); // 1 sekund timeout per tegn
+                            if (ch == PICO_ERROR_TIMEOUT) {
+                                // Timeout: stop og skriv fejlbesked
+                                printf("Ingen respons modtaget fra PC.\n");
+                                break;
+                            }
+                            if (ch == '\n') break;
+                            if (i < (int)sizeof(response) - 1) {
+                                response[i++] = (char) ch;
+                            }
+                        }
+                        response[i] = '\0';
+                        printf("Modtog respons: %s\n", response);
+                        
+                        // Efter at have modtaget respons, gå videre til næste tilstand
                         state = WAITING_FOR_SECOND;
                     }
                     else if (state == WAITING_FOR_SECOND) {
@@ -134,31 +156,28 @@ int main() {
                         }
                         else {
                             state = WAITING_FOR_RESPONSE;
-                            // Her kan du f.eks. sende flytningen til Stockfish:
-                            // sendMoveToStockfish(first_row, first_col, second_row, second_col);
-                            // Når svar er modtaget, nulstil tilstand:
-                            // state = WAITING_FOR_FIRST;
+                            // Her kan fx en yderligere kommunikation implementeres
+                            // fx: send begge træk til PC for at få en samlet respons
                         }
                     }
                 }
             }
         }
         
-        // Udskriv matrixens tilstand med alle variabler
-        printf("Matrix state:\n");
-        for (int i = 0; i < numRows; i++) {
-            for (int j = 0; j < numCols; j++) {
-                printf("(%d,%d): cur=%d, last=%d  ", 
-                    matrix[i][j].row, matrix[i][j].col, 
-                    matrix[i][j].current ? 1 : 0, 
-                    matrix[i][j].last ? 1 : 0);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        
-        // Vent et stykke mellem scanninger
-        sleep_ms(500);
+        // Udskriv matrixens tilstand (for debugging via USB serial)
+        //printf("Matrix state:\n");
+        //for (int i = 0; i < numRows; i++) {
+        //    for (int j = 0; j < numCols; j++) {
+        //        printf("(%d,%d): cur=%d, last=%d  ", 
+        //            matrix[i][j].row, matrix[i][j].col, 
+        //            matrix[i][j].current ? 1 : 0, 
+        //            matrix[i][j].last ? 1 : 0);
+        //    }
+        //    printf("\n");
+        //}
+        //printf("\n");
+        //
+        //sleep_ms(500);  // Kort pause mellem scanninger
     }
     
     return 0;
