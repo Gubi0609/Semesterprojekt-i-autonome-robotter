@@ -104,5 +104,6 @@
     "stdexcept": "cpp",
     "streambuf": "cpp",
     "typeinfo": "cpp"
-  }
+  },
+  "cmake.sourceDirectory": "/home/rune/Documents/2. semester/Projekt/projektgit/Semesterprojekt-i-autonome-robotter/Board_code"
 }
