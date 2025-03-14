@@ -11,14 +11,16 @@ int main() {
     StockfishLinux engine = StockfishLinux(stockfishPath);
     std::cout << "Stockfish engine created" << std::endl;
 
-    std::vector<std::string> legalMoves = engine.getLegalMoves("e2e4 e7e5");
+    engine.appendMovesMade("e2e4 e7e5");
+
+    std::vector<std::string> legalMoves = engine.getLegalMoves();
     std::cout << "Legal moves: ";
     for (const std::string& move : legalMoves) {
         std::cout << move << " ";
     }
     std::cout << std::endl;
 
-    std::string bestMove = engine.getBestMove("e2e4 e7e5");
+    std::string bestMove = engine.getBestMove();
     std::cout << "Best move: " << bestMove << std::endl;
 
     engine.~StockfishLinux();
