@@ -10,8 +10,8 @@ class StockfishLinux {
         StockfishLinux();
         StockfishLinux(const string&);
         void appendMovesMade(const string&);
-        string getBestMove(const string&);
-        vector<string> getLegalMoves(const string&);
+        string getBestMove();
+        vector<string> getLegalMoves();
         ~StockfishLinux();
 
     private:
