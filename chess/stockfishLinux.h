@@ -8,7 +8,7 @@ class StockfishLinux {
 
     public:
         StockfishLinux();
-        StockfishLinux(const string&);
+        StockfishLinux(const string&, int);
         void appendMovesMade(const string&);
         string getBestMove();
         vector<string> getLegalMoves();
@@ -19,6 +19,7 @@ class StockfishLinux {
         int stockfishOut[2]; // Pipe for reading output from Stockfish. Array of 2 integers.
         pid_t pid; // Process ID of the Stockfish engine.
         string movesMade;
+        int difficulty;
 
         bool writeToStockfish(const string& command);
         void waitForReady();

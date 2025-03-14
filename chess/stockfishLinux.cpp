@@ -11,13 +11,26 @@
 
 using namespace std;
 
-StockfishLinux::StockfishLinux(const string& stockfishPath) {
+StockfishLinux::StockfishLinux(const string& stockfishPath, int diff) {
     /* 
     Creates an instance of the Stockfish engine by forking a child process and
     establishing communication channels with the child process.
 
     :param stockfishPath: The path to the Stockfish executable.
+    :param diff: The difficulty of the stockfish engine. 1 - 5.
     */
+
+    movesMade = "";
+    
+    if (diff > 5) {
+        difficulty = 5;
+    }
+    else if (diff < 1) {
+        difficulty = 1;
+    }
+    else {
+        difficulty = diff;
+    }
 
     if (pipe(stockfishIn) == -1 || pipe(stockfishOut) == -1) { // Creates two pipes (stockfishIn and stockfishOut). Exits if pipes fail.
         perror("Pipe failed");
@@ -154,8 +167,10 @@ string StockfishLinux::getBestMove(){
     :param position: The position in moves made standard ("e2e4 a8a6 ...").
     */
 
+    string depth = to_string(difficulty * 4);
+
     writeToStockfish("position startpos moves " + movesMade); // Set the position in Stockfish
-    writeToStockfish("go depth 20"); // Search for the best move with a depth of 20
+    writeToStockfish("go depth " + depth); // Search for the best move with a depth of 20
     
     return readFromStockfish(); // Return the best move
 }
