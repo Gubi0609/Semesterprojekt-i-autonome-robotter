@@ -48,6 +48,17 @@ StockfishLinux::StockfishLinux(const string& stockfishPath) {
     waitForReady(); // Wait for readyok response from Stockfish
 }
 
+void StockfishLinux::appendMovesMade(const string& moveMade) {
+    /*
+    Appends a move to the string of moves made.
+
+    :param moveMade: The move made to append to movesMade. Multiple moves can be appended at once by seperating with space.
+    */
+
+    movesMade += " " + moveMade;
+
+}
+
 bool StockfishLinux::writeToStockfish(const string& command) {
     /*
     writes a command to Stockfish.cmd
@@ -136,27 +147,27 @@ string StockfishLinux::readFromStockfish() {
     return ""; // Return empty string if no best move or legal move is found
 }
 
-string StockfishLinux::getBestMove(const string& position){
+string StockfishLinux::getBestMove(){
     /*
     Gets the best move from Stockfish for a given position.
 
     :param position: The position in moves made standard ("e2e4 a8a6 ...").
     */
 
-    writeToStockfish("position startpos moves " + position); // Set the position in Stockfish
+    writeToStockfish("position startpos moves " + movesMade); // Set the position in Stockfish
     writeToStockfish("go depth 20"); // Search for the best move with a depth of 20
     
     return readFromStockfish(); // Return the best move
 }
 
-vector<string> StockfishLinux::getLegalMoves(const string& position){
+vector<string> StockfishLinux::getLegalMoves(){
     /*
     Gets all the legal moves from Stockfish for a given position. Returns as a list of moves.getBestMove
 
     :param position: The position in moves made standard ("e2e4 a8a6 ...").
     */
     
-    writeToStockfish("position startpos moves " + position); // Set the position in Stockfish
+    writeToStockfish("position startpos moves " + movesMade); // Set the position in Stockfish
     writeToStockfish("go perft 1"); // Get the legal moves using the perft command
 
     string legalMovesStr = readFromStockfish();  // Get space-separated moves
