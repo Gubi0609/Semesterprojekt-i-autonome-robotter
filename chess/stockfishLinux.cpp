@@ -1,3 +1,4 @@
+
 #ifndef _WIN32 // Exclude the entire file from Windows builds
 
 #include "stockfishLinux.h"
@@ -11,13 +12,26 @@
 
 using namespace std;
 
-StockfishLinux::StockfishLinux(const string& stockfishPath) {
+StockfishLinux::StockfishLinux(const string& stockfishPath, int diff) {
     /* 
     Creates an instance of the Stockfish engine by forking a child process and
     establishing communication channels with the child process.
 
     :param stockfishPath: The path to the Stockfish executable.
+    :param diff: The difficulty of the stockfish engine. 1 - 5.
     */
+
+    movesMade = "";
+    
+    if (diff > 5) {
+        difficulty = 5;
+    }
+    else if (diff < 1) {
+        difficulty = 1;
+    }
+    else {
+        difficulty = diff;
+    }
 
     if (pipe(stockfishIn) == -1 || pipe(stockfishOut) == -1) { // Creates two pipes (stockfishIn and stockfishOut). Exits if pipes fail.
         perror("Pipe failed");
@@ -46,6 +60,17 @@ StockfishLinux::StockfishLinux(const string& stockfishPath) {
     writeToStockfish("isready");
 
     waitForReady(); // Wait for readyok response from Stockfish
+}
+
+void StockfishLinux::appendMovesMade(const string& moveMade) {
+    /*
+    Appends a move to the string of moves made.
+
+    :param moveMade: The move made to append to movesMade. Multiple moves can be appended at once by seperating with space.
+    */
+
+    movesMade += " " + moveMade;
+
 }
 
 bool StockfishLinux::writeToStockfish(const string& command) {
@@ -136,27 +161,29 @@ string StockfishLinux::readFromStockfish() {
     return ""; // Return empty string if no best move or legal move is found
 }
 
-string StockfishLinux::getBestMove(const string& position){
+string StockfishLinux::getBestMove(){
     /*
     Gets the best move from Stockfish for a given position.
 
     :param position: The position in moves made standard ("e2e4 a8a6 ...").
     */
 
-    writeToStockfish("position startpos moves " + position); // Set the position in Stockfish
-    writeToStockfish("go depth 20"); // Search for the best move with a depth of 20
+    string depth = to_string(difficulty * 4);
+
+    writeToStockfish("position startpos moves " + movesMade); // Set the position in Stockfish
+    writeToStockfish("go depth " + depth); // Search for the best move with a depth of 20
     
     return readFromStockfish(); // Return the best move
 }
 
-vector<string> StockfishLinux::getLegalMoves(const string& position){
+vector<string> StockfishLinux::getLegalMoves(){
     /*
     Gets all the legal moves from Stockfish for a given position. Returns as a list of moves.getBestMove
 
     :param position: The position in moves made standard ("e2e4 a8a6 ...").
     */
     
-    writeToStockfish("position startpos moves " + position); // Set the position in Stockfish
+    writeToStockfish("position startpos moves " + movesMade); // Set the position in Stockfish
     writeToStockfish("go perft 1"); // Get the legal moves using the perft command
 
     string legalMovesStr = readFromStockfish();  // Get space-separated moves
