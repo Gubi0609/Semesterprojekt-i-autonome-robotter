@@ -48,6 +48,17 @@ StockfishLinux::StockfishLinux(const string& stockfishPath) {
     waitForReady(); // Wait for readyok response from Stockfish
 }
 
+void StockfishLinux::appendMovesMade(const string& moveMade) {
+    /*
+    Appends a move to the string of moves made.
+
+    :param moveMade: The move made to append to movesMade. Multiple moves can be appended at once by seperating with space.
+    */
+
+    movesMade += " " + moveMade;
+
+}
+
 bool StockfishLinux::writeToStockfish(const string& command) {
     /*
     writes a command to Stockfish.cmd
