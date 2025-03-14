@@ -8,7 +8,7 @@ int main() {
 
     std::cout << "Stockfish path: " << stockfishPath << std::endl;
 
-    StockfishLinux engine = StockfishLinux(stockfishPath);
+    StockfishLinux engine = StockfishLinux(stockfishPath, 5);
     std::cout << "Stockfish engine created" << std::endl;
 
     engine.appendMovesMade("e2e4 e7e5");
