@@ -5,12 +5,13 @@
 #include <vector>
 #include <array>
 #include <sstream>
+#include <utility>
 
 // Structure representing a move with source and destination coordinates.
 // Files: 'a'-'h' -> 0-7, Ranks: '1'-'8' -> 0-7.
 struct Move {
-    std::pair<int, int> source;       // e.g., a2 -> (0, 1)
-    std::pair<int, int> destination;  // e.g., a4 -> (0, 3)
+    std::pair<int, int> source;       // (file, rank)
+    std::pair<int, int> destination;  // (file, rank)
 };
 
 // Converts a move string (e.g., "a2a4") into a Move struct.
@@ -23,6 +24,16 @@ Move convertMove(const std::string &moveStr) {
     int dstFile = moveStr[2] - 'a';
     int dstRank = moveStr[3] - '1';
     return {{srcFile, srcRank}, {dstFile, dstRank}};
+}
+
+// Function to convert a Move struct back into a chess move string.
+std::string moveToString(const Move &move) {
+    std::string moveStr;
+    moveStr.push_back('a' + move.source.first);
+    moveStr.push_back('1' + move.source.second);
+    moveStr.push_back('a' + move.destination.first);
+    moveStr.push_back('1' + move.destination.second);
+    return moveStr;
 }
 
 // Parses a single input string containing moves separated by spaces
@@ -51,21 +62,15 @@ std::vector<Move> getLegalMovesForSquare(const std::vector<Move>& moves, int fil
     return result;
 }
 
-// Definér tydelige tilstande
-enum State {
-    INITIALIZE,
-    WAITING_FOR_FIRST,
-    WAITING_FOR_SECOND,
-    WAITING_FOR_RESPONSE
-};
 
-// Struktur for hvert punkt i matrixen
+
+// Structure for each point in the matrix
 struct Point {
-    bool current;       // Nuværende værdi (0 eller 1)
-    bool last;          // Forrige værdi
-    int row;            // Række-position
-    int col;            // Kolonne-position
-    bool lys;           // LED-status (tændt/slukket)
+    int current;       // current value (0 or 1)
+    int last;          // previous value
+    int row;           // row position (rank)
+    int col;           // column position (file)
+    bool lys;          // LED status (on/off)
 };
 
 const int numRows = 8;
@@ -77,34 +82,34 @@ int second_col = 0;
 int second_row = 0;
 
 bool wait = true;
-
+int runs = 0;
 std::vector<Move> moves;
 
-State state = WAITING_FOR_FIRST;
+int state = 1;
 
-// Definer hvilke pins, der bruges til rækker (outputs) og kolonner (inputs)
-// Juster disse pin-numre til din hardwareopsætning
+// Define pins for rows (outputs) and columns (inputs)
+// Adjust these pin numbers to your hardware setup.
 const uint rowPins[numRows] = {0, 1, 2, 3, 4, 5, 6, 7};
 const uint colPins[numCols] = {8, 9, 10, 11, 12, 13, 14, 15};
 const uint colPins_light[numCols] = {16, 17, 18, 19, 20, 21, 22, 23};
 
-// Funktion til at initialisere alle pins
+// Function to initialize all pins
 void initPins() {
-    // Initialiser række-pins som outputs og sæt dem til lav
+    // Initialize row pins as outputs and set them low.
     for (int i = 0; i < numRows; i++) {
         gpio_init(rowPins[i]);
         gpio_set_dir(rowPins[i], GPIO_OUT);
         gpio_put(rowPins[i], 0);
     }
     
-    // Initialiser kolonne-pins som inputs med pull-down-modstand
+    // Initialize column pins as inputs with pull-down resistors.
     for (int j = 0; j < numCols; j++) {
         gpio_init(colPins[j]);
         gpio_set_dir(colPins[j], GPIO_IN);
         gpio_pull_down(colPins[j]);
     }
     
-    // Initialiser light-pins som outputs og sæt dem til high
+    // Initialize light pins as outputs and set them high.
     for (int i = 0; i < numCols; i++) {
         gpio_init(colPins_light[i]);
         gpio_set_dir(colPins_light[i], GPIO_OUT);
@@ -112,143 +117,152 @@ void initPins() {
     }
 }
 
-// Funktion til at slukke alle lys i matrixen
+// Function to turn off all lights in the matrix.
 void clearLights(Point matrix[numRows][numCols]) {
     for (int i = 0; i < numRows; i++) {
         for (int j = 0; j < numCols; j++) {
             matrix[i][j].lys = false;
         }
     }
-    for(int j = 0; j < 16; j++) {
+   
+    for (int j = 0; j < numCols; j++) {
         gpio_put(colPins_light[j], 1);    
     }
 }
 
+// Function that waits for input from the PC, parses it into a vector of Moves, and returns it.
+std::vector<Move> waitForMovesFromPC() {
+    char inputBuffer[256];
+    while (true) {
+        int index = 0;
+        // printf("Vent på vector string fra PC...\n");
+        
+        // Blocking read until newline.
+        while (true) {
+            int ch = getchar();
+            if (ch == '\n') break;
+            if (ch != EOF) {
+                if (index < (int)sizeof(inputBuffer) - 1) {
+                    inputBuffer[index++] = (char)ch;
+                }
+            }
+        }
+        inputBuffer[index] = '\0';  // Null-terminate the string.
+        
+        // If input is not empty, parse and return moves.
+        if (strlen(inputBuffer) > 0) {
+            std::vector<Move> moves = parseMoves(inputBuffer);
+            // printf("Parserede træk:\n");
+            //for (const auto &move : moves) {
+                // printf("Fra (%d, %d) -> Til (%d, %d)\n", 
+                    // move.source.first, move.source.second, 
+                   //  move.destination.first, move.destination.second);
+            }
+            return moves;
+        }
+        sleep_us(500);  // Short delay before trying again.
+    }
+
+
 int main() {
-    stdio_init_all();  // Initialiser USB CDC
+
+    stdio_init_all();  // Initialize USB CDC.
     initPins();
     
-    // Opret og initialiser en 8x8 matrix af Point-objekter
+    // Create and initialize an 8x8 matrix of Point objects.
     Point matrix[numRows][numCols];
     for (int i = 0; i < numRows; i++) {
         for (int j = 0; j < numCols; j++) {
-            matrix[i][j].row = i;
-            matrix[i][j].col = j;
-            matrix[i][j].current = false;
-            matrix[i][j].last = false;
+            matrix[i][j].row = i;  // rank
+            matrix[i][j].col = j;  // file
+            matrix[i][j].current = 0;
+            matrix[i][j].last = 0;
             matrix[i][j].lys = false;
         }
     }
     
-    // I starten af main-loopen venter vi på en vector-string fra PC'en.
-    // Denne del blokerer indtil der modtages en linje (afsluttet med newline)
-    while (wait == true) {
-        char inputBuffer[256];
-        int index = 0;
-        printf("Vent på vector string fra PC...\n");
-        while (true) {
-            int ch = getchar();  // Blokerende læsning
-            if (ch == '\n') break;
-            if (ch != EOF) {
-                if (index < (int)sizeof(inputBuffer) - 1) {
-                    inputBuffer[index++] = (char) ch;
-                }
-            }
-        }
-        inputBuffer[index] = '\0';  // Null-terminér strengen
-        printf("Modtaget vector string: %s\n", inputBuffer);
-        
-        // Hvis en ikke-tom string er modtaget, afslut venteløkken
-        if (strlen(inputBuffer) > 0) {
-            wait = false;
-            moves = parseMoves(inputBuffer); //moves fra stock blvier laver om til tal til matrix
-            // Print de konverterede træk til den serielle konsol
-            printf("Parserede træk:\n");
-            for (const auto &move : moves) {
-                printf("Fra (%d, %d) -> Til (%d, %d)\n", 
-                    move.source.first, move.source.second, 
-                    move.destination.first, move.destination.second);
-                }
-    }   sleep_us(100000);
-    
+    moves = waitForMovesFromPC();
     
     while (true) {
-        // Scan matrixen: sæt én række ad gangen til HIGH
+        
+        // Scan the matrix: set one row HIGH at a time.
         for (int row = 0; row < numRows; row++) {
-            // Sørg for, at alle rækker sættes til lav først
+            // Set all rows LOW first.
             for (int r = 0; r < numRows; r++) {
                 gpio_put(rowPins[r], 0);
             }
-            // Sæt den aktive række til HIGH
+            // Set the active row HIGH.
             gpio_put(rowPins[row], 1);
             
-            // Kort delay for at signalet kan stabilisere sig
-            sleep_us(100);
+            // Short delay for signal stabilization.
+            sleep_us(1000);
             
-            // Læs kolonne-inputs for den aktive række og opdater hvert point
+            // Read column inputs for the active row and update each point.
             for (int col = 0; col < numCols; col++) {
-                // Styr LED baseret på matrixpunktets lys-status
+                runs++;
+                // Control LED based on the matrix point's light status.
                 if (matrix[row][col].lys == true) {
                     gpio_put(colPins_light[col], 0);
                 } else {
                     gpio_put(colPins_light[col], 1);
                 }
-                // Gem forrige værdi
+                // Save the previous value.
                 matrix[row][col].last = matrix[row][col].current;
-                // Læs den nye værdi
+                // Read the new value.
                 matrix[row][col].current = gpio_get(colPins[col]);
+                // printf("row: %d, col: %d, current: %d, last: %d\n", row, col, matrix[row][col].current, matrix[row][col].last);
 
-                // Hvis der sker en ændring i input (evt. med debouncing)
-                if (matrix[row][col].current != matrix[row][col].last) {
-                    if (state == INITIALIZE) {
-                        state = WAITING_FOR_FIRST;
-                    }
-                    else if (state == WAITING_FOR_FIRST) {
-                        // Første tryk registreret: gem koordinater
+                // If there's a change in input
+                if (runs < 65) {
+                    // printf("runs: %d\n", runs);
+                    
+                }
+                else if (matrix[row][col].current != matrix[row][col].last) {
+                    sleep_us(1000);  // Debounce delay.
+                    
+                    if (state == 1) {
+                        
                         first_col = matrix[row][col].col;
                         first_row = matrix[row][col].row;
-
-                        // Find alle lovlige træk for det valgte felt
-                        std::vector<Move> legalMoves = getLegalMovesForSquare(moves, first_row, first_col);
-                        // Print out the legal moves from the given square.
-                        printf("Legal moves for square (%d, %d):\n", first_row, first_col);
+                        // printf("runs: %d\n", runs);
+                        
+                        std::vector<Move> legalMoves = getLegalMovesForSquare(moves, first_col, first_row);
+                        // printf("Legal moves for square (file: %d, rank: %d):\n", first_col, first_row);
                         for (const auto &move : legalMoves) {
-                            matrix[move.destination.first][move.destination.second].lys = true; // Tænd LED for lovlige træk
-                            // We print only the destination coordinate.
-                            printf("-> Destination: (%d, %d)\n", move.destination.first, move.destination.second);
-    }
-                        // Efter at have modtaget respons, gå videre til næste tilstand
-                        state = WAITING_FOR_SECOND;
+                            // Activate LED for legal move destination.
+                            matrix[move.destination.second][move.destination.first].lys = true;
+                            // printf("-> Destination (file: %d, rank: %d)\n", move.destination.first, move.destination.second);
+                        }
+                        state = 2;
                     }
-                    else if (state == WAITING_FOR_SECOND) {
-                        // Andet tryk registreret
+                    else if (state == 2) {
+                        // Second press detected.
                         second_col = matrix[row][col].col;
                         second_row = matrix[row][col].row;
                         clearLights(matrix);
+                        // printf("2. brik sat \n");
                         
-                        // Hvis det samme felt er trykket, annulleres handlingen
                         if (first_col == second_col && first_row == second_row) {
-                            state = WAITING_FOR_FIRST;
+                            state = 1;
                         }
                         else {
-                            state = INITIALIZE;
-                            // Send trækket til PC'en
-                            // vent på svar fra pc
-                            //evt send vidre til gripper
-                            //opdater legel moves fra stockfish
+                            state = 1;
+                            runs = 0;
+                            
+                            Move movemade = {{first_col, first_row}, {second_col, second_row}};
+                            std::string movetosend = moveToString(movemade);
+                            // printf("sender move \n");
+                            printf("%s\n", movetosend.c_str());
+                            moves = waitForMovesFromPC();
+                            //andet logik efter træk her
                         }
                     }
-             
                 }
-            
-            sleep_us(100);
+                sleep_us(100);
             }
-        
         }
-        
-        
     }
     
     return 0;
 }
-}
+// sudo minicom -D /dev/ttyACM0 -b 115200

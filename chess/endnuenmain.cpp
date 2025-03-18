@@ -30,6 +30,8 @@ int main() {
         std::string bestMove = engine.getBestMove();
         std::cout << "Best move: " << bestMove << std::endl;
         engine.appendMovesMade(bestMove);
+        
+        sleep_us(1000)
     }
 
     return 0;

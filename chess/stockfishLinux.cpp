@@ -1,4 +1,3 @@
-
 #ifndef _WIN32 // Exclude the entire file from Windows builds
 
 #include "stockfishLinux.h"
@@ -9,6 +8,8 @@
 #include <cstring>      // Provides functions like memcpy() and strcmp().
 #include <sstream>      // For istringstream
 #include <vector>
+#include <fcntl.h>
+#include <termios.h>
 
 using namespace std;
 
@@ -197,6 +198,116 @@ vector<string> StockfishLinux::getLegalMoves(){
 
     return legalMoves;  // Return vector of moves
 }
+
+int StockfishLinux::openSerialPort(const char* port) {
+    serial_fd = open(port, O_RDWR | O_NOCTTY | O_SYNC);
+    if (serial_fd < 0) {
+        perror("Fejl ved åbning af serialport");
+        return -1;
+    }
+
+    struct termios tty;
+    memset(&tty, 0, sizeof tty);
+    if (tcgetattr(serial_fd, &tty) != 0) {
+        perror("Fejl ved tcgetattr");
+        close(serial_fd);
+        serial_fd = -1;
+        return -1;
+    }
+    
+    // Sæt baudrate til 115200
+    cfsetospeed(&tty, B115200);
+    cfsetispeed(&tty, B115200);
+
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
+    tty.c_iflag &= ~IGNBRK;
+    tty.c_lflag = 0;             
+    tty.c_oflag = 0;
+    tty.c_cc[VMIN]  = 1;         // Bloker indtil mindst 1 byte modtages
+    tty.c_cc[VTIME] = 0;         // Ingen timeout - vent uendeligt
+
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~(PARENB | PARODD);
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;     // Ingen hardware flow control
+
+    if (tcsetattr(serial_fd, TCSANOW, &tty) != 0) {
+        perror("Fejl ved tcsetattr");
+        close(serial_fd);
+        serial_fd = -1;
+        return -1;
+    }
+    return serial_fd;
+}
+
+
+ssize_t StockfishLinux::writeSerialPort(const std::string& data) {
+    if (serial_fd < 0) {
+        std::cerr << "Serieporten er ikke åben!" << std::endl;
+        return -1;
+    }
+    ssize_t bytesWritten = write(serial_fd, data.c_str(), data.size());
+    if (bytesWritten < 0) {
+        perror("Fejl ved skrivning til serialport");
+    }
+    return bytesWritten;
+}
+
+std::string StockfishLinux::readSerialPort() {
+    if (serial_fd < 0) {
+        std::cerr << "Serieporten er ikke åben!" << std::endl;
+        return "";
+    }
+    char buffer[256];
+    ssize_t bytesRead = read(serial_fd, buffer, sizeof(buffer) - 1);
+    if (bytesRead < 0) {
+        perror("Fejl ved læsning fra serialport");
+        return "";
+    }
+    buffer[bytesRead] = '\0';
+    return std::string(buffer);
+}
+
+void StockfishLinux::closeSerialPort() {
+    if (serial_fd >= 0) {
+        close(serial_fd);
+        serial_fd = -1;
+    }
+}
+
+
+int StockfishLinux::sendlegelmoves(const std::vector<std::string>& legalMoves) {
+    std::string legalMovesString;
+    for (const auto& move : legalMoves) {
+        legalMovesString += move + " ";
+    }
+    if (!legalMovesString.empty() && legalMovesString.back() == ' ') {
+        legalMovesString.pop_back();
+    }
+    legalMovesString += "\n";
+
+    ssize_t bytesWritten = writeSerialPort(legalMovesString);
+    if (bytesWritten < 0) {
+        return 1;
+    } else {
+        std::cout << "Sendte legal moves string: " << legalMovesString;
+    }
+    return 0;
+}
+
+std::string StockfishLinux::movefrompico() {
+    while (true) {
+        std::string move = readSerialPort();
+        if (move.size() >= 4) {
+            std::cout << "Data modtaget fra porten: " << move << std::endl;
+            return move;
+        }
+        std::cout << "Ugyldig pakke registreret: " << move << std::endl;
+    }
+}
+
 
 StockfishLinux::~StockfishLinux() {
     /*
