@@ -10,6 +10,7 @@ class StockfishLinux {
         StockfishLinux();
         StockfishLinux(const string&, int);
         void appendMovesMade(const string&);
+        bool isOccupied(const string&);
         string getBestMove();
         vector<string> getLegalMoves();
         ~StockfishLinux();

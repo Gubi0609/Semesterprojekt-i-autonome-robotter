@@ -13,6 +13,7 @@ int main() {
 
     engine.appendMovesMade("d2d4");
     engine.appendMovesMade("e7e5");
+    cout << engine.isOccupied("d4e5") << endl;
 
     std::vector<std::string> legalMoves = engine.getLegalMoves();
     std::cout << "Legal moves: ";
