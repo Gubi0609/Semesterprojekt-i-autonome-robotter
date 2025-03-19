@@ -270,6 +270,48 @@ string StockfishLinux::handlePromotion(const string& move) {
     return move; // Return unchanged if not a promotion move
 }
 
+bool StockfishLinux::isOccupied(const string& move) {
+    /*
+    Checks if the to square of the move is occupied by a piece.
+
+    :param move: The move in UCI format (e.g., "e7e8").
+    */
+
+    char endFile = move[2]; // Get the file of the end square
+    char endRank = move[3]; // Get the rank of the end square
+
+    appendMovesMade(move); // Append the move to the moves made
+    string fen = getFEN(); // Get the FEN representation of the board
+    if (fen.empty()) {
+        cerr << "Failed to retrieve FEN from Stockfish." << endl;
+        return false; // Assume unoccupied if FEN retrieval fails
+    }
+    movesMade = movesMade.substr(0, movesMade.size() - move.size() - 1); // Remove the move from moves made again
+
+    // Extract board position (first part of FEN before the first space)
+    string boardState = fen.substr(0, fen.find(' '));
+
+    // Convert rank and file to FEN index
+    int fileIndex = endFile - 'a';   // 'a' = 0, 'b' = 1, ..., 'h' = 7
+    int rankIndex = '8' - endRank;   // Rank 8 = index 0, Rank 7 = index 1, ..., Rank 1 = index 7
+
+    int boardPos = 0;
+    for (char c : boardState) {
+        if (isdigit(c)) {
+            boardPos += (c - '0'); // Skip empty squares
+        } else if (c == '/') {
+            continue; // Skip row separators
+        } else {
+            if (boardPos == rankIndex * 8 + fileIndex) {
+                return true; // Found a piece at the target square
+            }
+            boardPos++;
+        }
+    }
+
+    return false; // No piece found at the target square
+}
+
 string StockfishLinux::getBestMove(){
     /*
     Gets the best move from Stockfish for a given position.
