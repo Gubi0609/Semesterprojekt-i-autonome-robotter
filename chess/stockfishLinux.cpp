@@ -69,12 +69,12 @@ void StockfishLinux::appendMovesMade(const string& moveMade) {
     :param moveMade: The move made to append to movesMade. Only one move can be appended at a time.
     */
 
-    if (moveMade.size() == 5) {
+    if (moveMade.size() == 4) {
     string processedMove = handlePromotion(moveMade); // Check for pawn promotion
         if (!processedMove.empty()) {
             movesMade += " " + processedMove;
         }
-    } else {
+    } else if (moveMade.size() == 5) {
         movesMade += " " + moveMade;
     }
 
