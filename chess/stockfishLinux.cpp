@@ -8,6 +8,7 @@
 #include <cstring>      // Provides functions like memcpy() and strcmp().
 #include <sstream>      // For istringstream
 #include <vector>
+#include <limits>       // For numeric_limits
 
 using namespace std;
 
@@ -63,12 +64,19 @@ StockfishLinux::StockfishLinux(const string& stockfishPath, int diff) {
 
 void StockfishLinux::appendMovesMade(const string& moveMade) {
     /*
-    Appends a move to the string of moves made.
+    Appends a move to the string of moves made. Handles pawn promotion if applicable.
 
-    :param moveMade: The move made to append to movesMade. Multiple moves can be appended at once by seperating with space.
+    :param moveMade: The move made to append to movesMade. Only one move can be appended at a time.
     */
 
-    movesMade += " " + moveMade;
+    if (moveMade.size() == 5) {
+    string processedMove = handlePromotion(moveMade); // Check for pawn promotion
+        if (!processedMove.empty()) {
+            movesMade += " " + processedMove;
+        }
+    } else {
+        movesMade += " " + moveMade;
+    }
 
 }
 
@@ -147,6 +155,11 @@ string StockfishLinux::readFromStockfish() {
                         isalpha(move[2]) && isdigit(move[3])) {
                         
                         legalMoves += move + " "; // Append the move to the legalMoves string
+                    } else if (move.size() == 5 && isalpha(move[0]) && isdigit(move[1]) &&
+                        isalpha(move[2]) && isdigit(move[3]) && (move[4] == 'q' || move[4] == 'r' ||
+                        move[4] == 'b' || move[4] == 'n')) {
+                        
+                        legalMoves += move + " "; // Append the move to the legalMoves string
                     }
                 }
             }
@@ -158,6 +171,103 @@ string StockfishLinux::readFromStockfish() {
     }
 
     return ""; // Return empty string if no best move or legal move is found
+}
+
+string StockfishLinux::getFEN() {
+    /*
+    Gets the current FEN representation of the board from Stockfish.
+
+    :return: FEN string of the current board position.
+    */
+
+    writeToStockfish("position startpos moves " + movesMade); // Set up position
+    writeToStockfish("d"); // Ask for board state
+
+    char buffer[4096];
+    string output;
+    ssize_t bytesRead;
+
+    while ((bytesRead = read(stockfishOut[0], buffer, sizeof(buffer) - 1)) > 0) {
+        buffer[bytesRead] = '\0';
+        output += buffer;
+
+        // Look for the line containing "Fen:"
+        size_t fenPos = output.find("Fen: ");
+        if (fenPos != string::npos) {
+            size_t endLine = output.find("\n", fenPos);
+            return output.substr(fenPos + 5, endLine - fenPos - 5); // Extract FEN part
+        }
+    }
+
+    return ""; // Return empty if no FEN found
+}
+
+string StockfishLinux::handlePromotion(const string& move) {
+    /*
+    Ensures that only pawn moves trigger promotion handling by checking the board state.
+
+    :param move: The move in UCI format (e.g., "e7e8").
+    :return: The move with the promotion piece appended if applicable.
+    */
+
+    if (move.size() != 4) return move; // Ensure it's a standard move
+
+    char startFile = move[0];  // First letter (file)
+    char startRank = move[1];  // Second digit (rank)
+    char endRank = move[3];    // Fourth digit (rank)
+
+    // Get the FEN string from Stockfish
+    string fen = getFEN();
+    if (fen.empty()) return move; // FEN retrieval failed
+
+    // Extract board position (first part of FEN before the first space)
+    string boardState = fen.substr(0, fen.find(' '));
+
+    // Convert rank and file to FEN index
+    int fileIndex = startFile - 'a';   // 'a' = 0, 'b' = 1, ..., 'h' = 7
+    int rankIndex = '8' - startRank;   // Rank 8 = index 0, Rank 7 = index 1, ..., Rank 1 = index 7
+
+    // Find piece at (fileIndex, rankIndex) in FEN
+    int boardPos = 0;
+    char piece = ' ';
+
+    for (char c : boardState) {
+        if (isdigit(c)) {
+            boardPos += (c - '0'); // Skip empty squares
+        } else if (c == '/') {
+            continue; // Skip row separators
+        } else {
+            if (boardPos == rankIndex * 8 + fileIndex) {
+                piece = c; // Found the piece at the given position
+                break;
+            }
+            boardPos++;
+        }
+    }
+
+    // Only apply promotion if the piece is a pawn ('P' for white, 'p' for black)
+    if (piece != 'P' && piece != 'p') {
+        return move; // Not a pawn, return move unchanged
+    }
+
+    // Ensure move is from rank 7 -> 8 (white) or rank 2 -> 1 (black)
+    if ((startRank == '7' && endRank == '8') || (startRank == '2' && endRank == '1')) {
+        char promotionPiece = 'q'; // Default to queen
+
+        // Ask user for promotion choice
+        cout << "Pawn promotion detected! Choose piece (q, r, b, n): ";
+        cin >> promotionPiece;
+
+        // Ensure valid input
+        if (promotionPiece != 'q' && promotionPiece != 'r' && 
+            promotionPiece != 'b' && promotionPiece != 'n') {
+            promotionPiece = 'q'; // Default to queen if invalid input
+        }
+
+        return move + promotionPiece; // Append promotion piece
+    }
+
+    return move; // Return unchanged if not a promotion move
 }
 
 string StockfishLinux::getBestMove(){

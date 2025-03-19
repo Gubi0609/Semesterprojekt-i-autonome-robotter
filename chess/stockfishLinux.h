@@ -24,5 +24,7 @@ class StockfishLinux {
         bool writeToStockfish(const string& command);
         void waitForReady();
         string readFromStockfish();
+        string getFEN();
+        string handlePromotion(const string&);
 
 };
