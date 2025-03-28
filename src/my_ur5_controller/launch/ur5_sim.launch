@@ -1,0 +1,14 @@
+<launch>
+    <!-- Run this file in terminal by: roslaunch my_ur5_controller ur5_sim.launch -->
+    <!-- Start MoveIt without Gazebo -->
+    <include file="$(find ur5_moveit_config)/launch/demo.launch"/>
+
+    <!-- Run the setup script -->
+    <node pkg="my_ur5_controller" type="setup_scene" name="setup_scene" output="screen"/>
+
+    <!-- Run the Pico Button Listener -->
+    <node pkg="my_ur5_controller" type="pico_button_listener" name="pico_listener" output="screen"/>
+
+    <!-- Run the UR5 Button Control Script -->
+    <node pkg="my_ur5_controller" type="ur5_button_control" name="ur5_button_control" output="screen"/>
+</launch>

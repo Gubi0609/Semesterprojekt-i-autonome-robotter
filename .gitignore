@@ -1,0 +1,14 @@
+# Ignore catkin build artifacts
+build/
+devel/
+install/
+
+# Logs
+log/
+*.log
+
+# Swap files (common fro text editors like Vim)
+*.swp
+
+# Cache files
+*.cache
