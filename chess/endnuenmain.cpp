@@ -2,6 +2,7 @@
 #include <iostream>
 
 
+
 int main() {
 #ifndef _WIN32
     std::string stockfishPath = "./stockfish-ubuntu-x86-64-sse41-popcnt";
