@@ -10,19 +10,10 @@ class StockfishLinux {
         StockfishLinux();
         StockfishLinux(const string&, int);
         void appendMovesMade(const string&);
+        bool isOccupied(const string&);
         string getBestMove();
         vector<string> getLegalMoves();
         ~StockfishLinux();
-
-        // Metoder, der benytter serieporten (som er gemt i serial_fd)
-        int sendlegelmoves(const std::vector<std::string>& legalMoves);
-        std::string movefrompico();
-
-        // Metoder til håndtering af serieporten
-        int openSerialPort(const char* port);
-        ssize_t writeSerialPort(const std::string& data);
-        std::string readSerialPort();
-        void closeSerialPort();
 
     private:
         int stockfishIn[2]; // Pipe for sending commands to Stockfish. Array of 2 integers.
@@ -30,11 +21,11 @@ class StockfishLinux {
         pid_t pid; // Process ID of the Stockfish engine.
         string movesMade;
         int difficulty;
-        int serial_fd; // File descriptor for the serial port.
 
         bool writeToStockfish(const string& command);
         void waitForReady();
         string readFromStockfish();
-
+        string getFEN();
+        string handlePromotion(const string&);
 
 };

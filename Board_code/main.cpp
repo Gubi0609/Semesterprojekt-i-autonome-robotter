@@ -252,7 +252,7 @@ int main() {
                             Move movemade = {{first_col, first_row}, {second_col, second_row}};
                             std::string movetosend = moveToString(movemade);
                             // printf("sender move \n");
-                            printf("%s\n", movetosend.c_str());
+                            printf("%s", movetosend.c_str());
                             moves = waitForMovesFromPC();
                             //andet logik efter træk her
                         }
