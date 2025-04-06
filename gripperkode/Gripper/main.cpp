@@ -58,7 +58,7 @@ void init_output_pin() {
 void close_gripper() {
     // Reset the flag before starting
     button_pressed = false;
-    pwm_set_gpio_level(PWM_PIN1, 500);
+    pwm_set_gpio_level(PWM_PIN1, 300);
     while (!button_pressed) {
         sleep_ms(10);
     }
@@ -68,8 +68,8 @@ void close_gripper() {
 
 // Function to "open the gripper" for demonstration purposes.
 void open_gripper() {
-    pwm_set_gpio_level(PWM_PIN2, 500);
-    sleep_ms(1500);
+    pwm_set_gpio_level(PWM_PIN2, 300);
+    sleep_ms(400);
     pwm_set_gpio_level(PWM_PIN2, 0);
 }
 
