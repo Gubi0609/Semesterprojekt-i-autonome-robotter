@@ -7,10 +7,17 @@
 #include <array>
 #include <string>
 #include <utility>
+
+#include <chrono>
+#include <thread>
+
+
+
 using namespace std;
 
 //#ifndef _WIN32
 #include "stockfishLinux.h"
+#include "SerialPort.h"
 //#endif
 
 struct PoseData {
@@ -152,9 +159,6 @@ std::vector<std::vector<string>> create_color_label_matrix(std::string start_col
     
         return board;
     }
-
-    std::vector<std::vector<string>> board(8, std::vector<string>(8));
-
 }
 
 std::vector<std::vector<PoseData>> create_dynamic_loc_storage(const PoseData& starting_pose, int rows, int cols)
@@ -199,7 +203,7 @@ std::vector<std::vector<string>> create_dynamic_chess_storage(int rows, int cols
 }
 
 
-void modify_storage(std::vector<std::vector<PoseData>> storage_cor,  
+void modify_storage(std::vector<std::vector<PoseData>> storage_cor, std::vector<std::vector<PoseData>> storage_cor_up, 
     std::vector<std::vector<string>>& storage, string target, int row, int col, 
     std::array<std::array<std::string, 8>, 8>& chess_board_pieces, moveit::planning_interface::MoveGroupInterface& move_group)
 {
@@ -221,7 +225,9 @@ void modify_storage(std::vector<std::vector<PoseData>> storage_cor,
                 if (storage[i][j] == "0")
                 {
                     storage[i][j] = chess_board_pieces[row][col];
+                    move_to_pose(move_group, storage_cor_up[i][j]);
                     move_to_pose(move_group, storage_cor[i][j]);
+                    move_to_pose(move_group, storage_cor_up[i][j]);
                     return;
                 }
             }
@@ -381,10 +387,11 @@ int main(int argc, char** argv)
 
     // Set initial position for the robot
     std::vector<PoseData> poses = {
-        {-0.200, -0.444, 0.151, 0, 1, 0, 0}, // Initial position for chess board
+        {-0.200, -0.444, 0.15, 0, 1, 0, 0}, // Initial position for chess board
         {-0.351, -0.444, 0.151, 0, 1, 0, 0}, // Initial position for white storage
         {0.300, -0.444, 0.151, 0, 1, 0, 0}, // Initial position for black storage
-        {-0.200, -0.444, 0.151+0.1, 0, 1, 0, 0} // Offset for moving pieces
+        {-0.200, -0.444, 0.15+0.15, 0, 1, 0, 0}, // Offset for moving pieces
+        {-0.351, -0.444, 0.15+0.15, 0, 1, 0, 0}
     };
 
     std::vector<double> joint_group_positions = {degToRad(95), degToRad(-82), degToRad(111), degToRad(-120), degToRad(-90), degToRad(326)};
@@ -395,6 +402,7 @@ int main(int argc, char** argv)
     auto chess_coordinatelabels = create_chess_label_matrix("w");
     auto chess_board_pieces = create_chesspiece_label_matrix();
     auto white_storage_cor = create_dynamic_loc_storage(poses[1], 2, 8);
+    auto white_storage_cor_up = create_dynamic_loc_storage(poses[4], 2, 8);
     auto black_storage_cor = create_dynamic_loc_storage(poses[2], 2, 8);
     auto white_storage = create_dynamic_chess_storage(2, 8);
 
@@ -403,6 +411,34 @@ int main(int argc, char** argv)
     StockfishLinux engine("/home/magnusm/ur5_ws/src/my_ur5_controller/src/stockfish-android-armv8", 3);
     //#endif
     
+    //To get tool flange location
+    //rosrun tf tf_echo /base_link /tool0
+
+
+    //Gripper control
+    /*
+    const char* port = "/dev/ttyACM0";  // Adjust this to your serial port device.
+    SerialPort serial;
+
+    if (serial.openSerial(port) < 0) {
+        return 1;
+    }
+
+    std::cout << "Serial port opened successfully." << std::endl;
+
+    serial.openGripper();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    serial.closeGripper();
+    */
+
+    //Missing features:
+    /*
+    Choose first player and thereby rotate or not the frames
+    When the player decommisions computers pieces, create function for filling computer storage
+    Handle promotions
+    Handle castling
+    Handle game ending
+    */
 
 
     /*
@@ -425,8 +461,6 @@ int main(int argc, char** argv)
           << " qw=" << grid[row][col].qw << std::endl;
 
     */
-
-
     while (ros::ok())
     {
         
@@ -468,8 +502,6 @@ int main(int argc, char** argv)
         
         move_to_pose(move_group, white_storage_cor[j][i]);
         */
-        
-        
         std::string target;
         std::cout << "Enter piece pick and place location: <a1e2>";
         std::cin >> target;
@@ -479,10 +511,10 @@ int main(int argc, char** argv)
         engine.appendMovesMade(target);
 
         //Get the move from stockfish
-        std::string bestmove = engine.getBestMove();
-        std::cout << "Best move: " << bestmove << std::endl;
+        //std::string bestmove = engine.getBestMove();
+        //std::cout << "Best move: " << bestmove << std::endl;
 
-        target = bestmove;
+        //target = bestmove;
         std::vector<std::string> result = split(target);
 
         auto [row, col] = find_in_matrix(chess_coordinatelabels, result[0]);
@@ -496,23 +528,41 @@ int main(int argc, char** argv)
             move_to_pose(move_group, grid_move[col2][row2]);
             move_to_pose(move_group, grid_pick[col2][row2]);
             //Moving to storage
-            modify_storage(white_storage_cor, white_storage, target, row2, col2, chess_board_pieces, move_group);
+            move_to_pose(move_group, grid_move[col2][row2]);
+            modify_storage(
+                white_storage_cor,      // storage_cor
+                white_storage_cor_up,   // storage_cor_up
+                white_storage,          // storage (vector<vector<string>>)
+                target,                 // target
+                row2, 
+                col2, 
+                chess_board_pieces, 
+                move_group
+            );            
             move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
             //ros::Duration(2.0).sleep();
             //moving to place
             move_to_pose(move_group, grid_move[col][row]);
             move_to_pose(move_group, grid_pick[col][row]);
+            move_to_pose(move_group, grid_move[col][row]);
             //move_to_pose(move_group, grid[col][row]);
             move_to_pose(move_group, grid_move[col2][row2]);
             move_to_pose(move_group, grid_pick[col2][row2]);
+            //move to above previous position
+            move_to_pose(move_group, grid_move[col2][row2]);
         }
         if (chess_board_pieces[row2][col2] == "")
         {
             std::cout << "Moving piece from " << result[0] << " to " << result[1] << std::endl;
             move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
+            //Moving to pick up
+            move_to_pose(move_group, grid_move[col][row]);
             move_to_pose(move_group, grid_pick[col][row]);
+            move_to_pose(move_group, grid_move[col][row]);
             //ros::Duration(2.0).sleep();
+            move_to_pose(move_group, grid_move[col2][row2]);
             move_to_pose(move_group, grid_pick[col2][row2]);
+            move_to_pose(move_group, grid_move[col2][row2]);
         }
         
 
@@ -521,10 +571,7 @@ int main(int argc, char** argv)
             continue;
         }
         
-        
-
     }
-
 
     ROS_INFO("Movement complete!");
     ros::shutdown();

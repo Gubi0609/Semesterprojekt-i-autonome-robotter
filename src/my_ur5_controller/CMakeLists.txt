@@ -216,7 +216,8 @@ add_executable(pico_button_listener src/pico_button_listener.cpp)
 add_executable(setup_scene src/setup_scene.cpp)
 add_executable(coordinatemove 
   src/coordinatemove.cpp
-  src/stockfishLinux.cpp)
+  src/stockfishLinux.cpp
+  src/SerialPort.cpp)
 ## Link libraries
 target_link_libraries(ur5_moveit_control ${catkin_LIBRARIES})
 target_link_libraries(my_robot_control ${catkin_LIBRARIES})
