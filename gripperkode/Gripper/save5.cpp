@@ -100,7 +100,17 @@ int main() {
     init_pwm();
     init_button();
     init_read_pin();
-    close_gripper();
+
+    // Main loop: wait on TRIG_PIN, then act on READ_PIN value
+    while (true) {
+        int signal = waitforpico();
+        if (signal == 1) {
+            close_gripper();
+        } else {
+            open_gripper();
+        }
+        sleep_ms(50);  // debounce/delay between cycles
+    }
 
     return 0;
 }

@@ -38,6 +38,7 @@ add_executable(gripper main.cpp)
 target_link_libraries(gripper
     pico_stdlib
     hardware_pwm
+    hardware_adc
 )
 
 # Konfigurer standard I/O: Vælg om du vil bruge UART eller USB
