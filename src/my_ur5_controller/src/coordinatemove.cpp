@@ -20,6 +20,9 @@ using namespace std;
 #include "SerialPort.h"
 //#endif
 
+// To run the script, use the command:
+// rosrun my_ur5_controller coordinatemove
+
 struct PoseData {
     double x, y, z, qx, qy, qz, qw;
 };
@@ -202,8 +205,8 @@ std::vector<std::vector<string>> create_dynamic_chess_storage(int rows, int cols
     return storage;
 }
 
-
-void modify_storage(std::vector<std::vector<PoseData>> storage_cor, std::vector<std::vector<PoseData>> storage_cor_up, 
+// Rename this function to something more descriptive
+void modify_player_storage(std::vector<std::vector<PoseData>> storage_cor, std::vector<std::vector<PoseData>> storage_cor_up, 
     std::vector<std::vector<string>>& storage, string target, int row, int col, 
     std::array<std::array<std::string, 8>, 8>& chess_board_pieces, moveit::planning_interface::MoveGroupInterface& move_group)
 {
@@ -227,6 +230,7 @@ void modify_storage(std::vector<std::vector<PoseData>> storage_cor, std::vector<
                     storage[i][j] = chess_board_pieces[row][col];
                     move_to_pose(move_group, storage_cor_up[i][j]);
                     move_to_pose(move_group, storage_cor[i][j]);
+                    // Gripper control
                     move_to_pose(move_group, storage_cor_up[i][j]);
                     return;
                 }
@@ -235,6 +239,40 @@ void modify_storage(std::vector<std::vector<PoseData>> storage_cor, std::vector<
             {
                 if (storage[i][j][0] == target[target.size()-1])
                 {
+                    storage[i][j] = "0";
+                    return;
+                }
+            }
+            
+        }
+    }
+}
+
+void modify_robotpieces_storage(std::vector<std::vector<PoseData>> storage_cor, std::vector<std::vector<PoseData>> storage_cor_up, 
+    std::vector<std::vector<string>>& storage, string target, int row, int col, 
+    std::array<std::array<std::string, 8>, 8>& chess_board_pieces, moveit::planning_interface::MoveGroupInterface& move_group)
+{
+    for (int i = 0; i < storage.size(); i++)
+    {
+        for (int j = 0; j < storage[i].size(); j++)
+        {
+            if (target.length() == 4)
+            {
+                if (storage[i][j] == "0")
+                {
+                    storage[i][j] = chess_board_pieces[row][col];
+                    return;
+                }
+            }
+            else if (target.length() == 5)
+            {
+                if (storage[i][j][0] == target[target.size()-1])
+                {
+                    // Pick up the piece
+                    move_to_pose(move_group, storage_cor_up[i][j]);
+                    move_to_pose(move_group, storage_cor[i][j]);
+                    // Gripper control
+                    move_to_pose(move_group, storage_cor_up[i][j]);
                     storage[i][j] = "0";
                     return;
                 }
@@ -283,10 +321,10 @@ void print_chessboard(const std::array<std::array<std::string, 8>, 8>& board)
 }
 
 
-std::array<std::array<std::string, 8>, 8> create_chess_label_matrix(string start_color)
+std::array<std::array<std::string, 8>, 8> create_chess_label_matrix(bool is_player_white)
 {
     std::array<std::array<std::string, 8>, 8> board;
-    if(start_color == "w")
+    if(is_player_white == false) //changed from true to false as the robot was white before
     {
         // Each row i → rank = i+1 (1..8)
         // Each column j → file = 'A' + j (A..H)
@@ -301,7 +339,7 @@ std::array<std::array<std::string, 8>, 8> create_chess_label_matrix(string start
         return board;
     }
 
-    else if(start_color == "b")
+    else if(is_player_white == true)
     {
         // Each row i → rank = i+1 (1..8)
         // Each column j → file = 'A' + j (A..H)
@@ -391,20 +429,63 @@ int main(int argc, char** argv)
         {-0.351, -0.444, 0.151, 0, 1, 0, 0}, // Initial position for white storage
         {0.300, -0.444, 0.151, 0, 1, 0, 0}, // Initial position for black storage
         {-0.200, -0.444, 0.15+0.15, 0, 1, 0, 0}, // Offset for moving pieces
-        {-0.351, -0.444, 0.15+0.15, 0, 1, 0, 0}
+        {-0.351, -0.444, 0.15+0.15, 0, 1, 0, 0}, // Offset for moving white storage pieces
+        {0.300, -0.444, 0.15+0.15, 0, 1, 0, 0} // Offset for moving black storage pieces
     };
+
+    //--------------------------------Select color--------------------------------
+
+    // Player or computer start
+    bool is_player_white = true; // true if player is white, false if player is black
+    bool is_player_selected = false; // true if player has selected a color, false otherwise
+    bool is_players_turn = true; // true if it is the player's turn, false if it is the computer's turn
+
+    while(is_player_selected==false)
+    {
+        cout << "Do you wish to play as white or black? <w/b>";
+        string color;
+        cin >> color;
+        if (color == "w")
+        {
+            is_player_white = true;
+            is_player_selected = true;
+            is_players_turn = true;
+        }
+        else if (color == "b")
+        {
+            is_player_white = false;
+            is_player_selected = true;
+            is_players_turn = false;
+        }
+        else 
+        {
+            cout << "Invalid colour choice. Please choose either w or b." << endl;
+            continue;
+        }
+    }
+
+    //------------------------------------Set game board-------------------------------
 
     std::vector<double> joint_group_positions = {degToRad(95), degToRad(-82), degToRad(111), degToRad(-120), degToRad(-90), degToRad(326)};
     moveToHomePosition(move_group, joint_group_positions);
 
+    // Create coordinate system for robot
     auto grid_pick = create_chess_frame(poses[0]);
     auto grid_move = create_chess_frame(poses[3]);
-    auto chess_coordinatelabels = create_chess_label_matrix("w");
+    // Create chess coordinate labels (A1, B1, C1, etc.)
+    auto chess_coordinatelabels = create_chess_label_matrix(is_player_white);
+    // Create chess board pieces (r, n, b, q, k, p)
     auto chess_board_pieces = create_chesspiece_label_matrix();
+    // Create chess white storage system
     auto white_storage_cor = create_dynamic_loc_storage(poses[1], 2, 8);
     auto white_storage_cor_up = create_dynamic_loc_storage(poses[4], 2, 8);
-    auto black_storage_cor = create_dynamic_loc_storage(poses[2], 2, 8);
     auto white_storage = create_dynamic_chess_storage(2, 8);
+    // Create chess black storage system
+    auto black_storage_cor_up = create_dynamic_loc_storage(poses[2], 2, 8);
+    auto black_storage_cor = create_dynamic_loc_storage(poses[5], 2, 8);
+    auto black_storage = create_dynamic_chess_storage(2, 8);
+
+
 
     //------------------------------Stockfish--------------------------------
     //#ifndef _WIN32
@@ -416,7 +497,7 @@ int main(int argc, char** argv)
 
 
     //Gripper control
-    /*
+    
     const char* port = "/dev/ttyACM0";  // Adjust this to your serial port device.
     SerialPort serial;
 
@@ -426,30 +507,31 @@ int main(int argc, char** argv)
 
     std::cout << "Serial port opened successfully." << std::endl;
 
+    serial.sendlegalmoves(engine.getLegalMoves());
+
+
     serial.openGripper();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     serial.closeGripper();
-    */
+    
 
     //Missing features:
     /*
-    Choose first player and thereby rotate or not the frames
-    When the player decommisions computers pieces, create function for filling computer storage
-    Handle promotions
+    Choose first player and thereby rotate or not the frames !DONE!
+    How does stockfish make the first move and how do i tell it what color it is? !DONE!
+    When the player decommisions computers pieces, create function for filling computer storage !DONE!
+    Handle promotions, retrieve from storage 
     Handle castling
-    Handle game ending
+    Handle game ending, this happens when there are no legal moves left
+    Handle illegal moves
+    Gripper control in modify storage function
+
+    Getbestmove function, castling e1c1/e1g1
+
     */
 
 
     /*
-    // Set the target pose
-    int row;
-    int col;
-    std::cout << "Enter the row of the pose you want to move to: ";
-    std::cin >> row;
-    std::cout << "Enter the  column of the pose you want to move to: ";
-    std::cin >> col;
-
     
     std::cout << "Chosen cell: row = " << row << ", col = " << col << std::endl;
     std::cout << "Pose: x=" << grid[row][col].x 
@@ -466,8 +548,19 @@ int main(int argc, char** argv)
         
         print_chessboard(chess_board_pieces);
         print_chessboard(chess_coordinatelabels);
+        std::cout << "White storage: " << std::endl;
         print_storage(white_storage);
+        std::cout << "Black storage: " << std::endl;
+        print_storage(black_storage);
         
+
+        while(true)
+        {
+            serial.sendlegalmoves(engine.getLegalMoves());
+            target=serial.movefrompico(); //cin >> target;
+            std::cout << "Data received from port: " << target << std::endl;
+
+        }
 
         /*
         string option;
@@ -502,34 +595,89 @@ int main(int argc, char** argv)
         
         move_to_pose(move_group, white_storage_cor[j][i]);
         */
+
+        
+        /*
+        cout << "Player is white? " << is_player_white << endl;
+
+        if (is_players_turn == true)
+        {
+            std::string target;
+            std::cout << "Enter piece pick and place location: <a1e2>";
+            std::cin >> target;
+            engine.appendMovesMade(target);
+            is_players_turn = false;
+            cout << "Player's turn" << is_players_turn << endl;
+        }
+        else if (is_players_turn == false)
+        {
+            std::string bestmove = engine.getBestMove();
+            std::cout << "Best move: " << bestmove << std::endl;
+            string target = bestmove;
+            std::cout << "Best move: " << target << std::endl;
+            engine.appendMovesMade(target);
+            is_players_turn = true;
+            cout << "Player's turn" << is_players_turn << endl;
+        }
+        */
+
+        std::cout << "Player is white? " << is_player_white << std::endl;
+
         std::string target;
-        std::cout << "Enter piece pick and place location: <a1e2>";
-        std::cin >> target;
+        std::string bestmove;
+
+        if (is_players_turn) //Same as (is_player_turn == true)
+        {
+            serial.sendlegalmoves(engine.getLegalMoves());
+            std::cout << "Enter piece pick and place location: <a1e2>";
+            target=serial.movefrompico(); //cin >> target;
+            std::cout << "Data received from port: " << target << std::endl;
+
+            //std::cin >> target;
+            engine.appendMovesMade(target);
+            is_players_turn = false;
+            std::cout << "Player's turn " << is_players_turn << std::endl;
+        }
+        else
+        {
+            bestmove = engine.getBestMove();
+            std::cout << "Best move: " << bestmove << std::endl;
+            target = bestmove;
+            engine.appendMovesMade(target);
+            serial.sendlegalmoves(engine.getLegalMoves());
+            is_players_turn = true;
+            std::cout << "Player's turn " << is_players_turn << std::endl;
+        }
+
+        //std::string target;
+        //std::cout << "Enter piece pick and place location: <a1e2>";
+        //std::cin >> target;
         //std::vector<std::string> result = split(target);
 
         //Tell stockfish the move that was made
-        engine.appendMovesMade(target);
+        //engine.appendMovesMade(target);
 
         //Get the move from stockfish
         //std::string bestmove = engine.getBestMove();
         //std::cout << "Best move: " << bestmove << std::endl;
 
-        //target = bestmove;
+
         std::vector<std::string> result = split(target);
+
+        cout << "Result: " << result[0] << " " << result[1] << std::endl;
 
         auto [row, col] = find_in_matrix(chess_coordinatelabels, result[0]);
         auto [row2, col2] = find_in_matrix(chess_coordinatelabels, result[1]);
 
-        if (chess_board_pieces[row2][col2] != "") 
+        if (chess_board_pieces[row2][col2] != "" && is_players_turn == true) // && is_player_turn == true
         {
-
             std::cout << "Piece already exists in target cell: " << result[1] << std::endl;
             //Moving to pick up
             move_to_pose(move_group, grid_move[col2][row2]);
             move_to_pose(move_group, grid_pick[col2][row2]);
             //Moving to storage
             move_to_pose(move_group, grid_move[col2][row2]);
-            modify_storage(
+            modify_player_storage(
                 white_storage_cor,      // storage_cor
                 white_storage_cor_up,   // storage_cor_up
                 white_storage,          // storage (vector<vector<string>>)
@@ -538,7 +686,7 @@ int main(int argc, char** argv)
                 col2, 
                 chess_board_pieces, 
                 move_group
-            );            
+            );
             move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
             //ros::Duration(2.0).sleep();
             //moving to place
@@ -551,7 +699,7 @@ int main(int argc, char** argv)
             //move to above previous position
             move_to_pose(move_group, grid_move[col2][row2]);
         }
-        if (chess_board_pieces[row2][col2] == "")
+        else if (chess_board_pieces[row2][col2] == "" && is_players_turn == true) // && is_player_turn == true
         {
             std::cout << "Moving piece from " << result[0] << " to " << result[1] << std::endl;
             move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
@@ -564,17 +712,38 @@ int main(int argc, char** argv)
             move_to_pose(move_group, grid_pick[col2][row2]);
             move_to_pose(move_group, grid_move[col2][row2]);
         }
-        
+        else if(chess_board_pieces[row2][col2] != "" && is_players_turn == false)
+        {
+            cout << "Piece already exists in target cell: " << result[1] << endl;
+            //move to storage
+            modify_robotpieces_storage(
+                black_storage_cor,      // storage_cor
+                black_storage_cor_up,   // storage_cor_up
+                black_storage,          // storage (vector<vector<string>>)
+                target,                 // target
+                row2, 
+                col2, 
+                chess_board_pieces, 
+                move_group
+            );
+            //modify in-game chess board
+            move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
+            //moving to place
+            //move_to_pose
+        }
+        else if(chess_board_pieces[row2][col2] == "" && is_players_turn == false)
+        {
+            cout << "Player moving piece from " << result[0] << " to " << result[1] << endl;
+            move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
+        }
 
-        if (row == -1 && col == -1) {
+        else if (row == -1 && col == -1) {
             std::cout << "Invalid cell: " << target << std::endl;
             continue;
         }
         
     }
-
     ROS_INFO("Movement complete!");
     ros::shutdown();
     return 0;
-
 }
