@@ -30,9 +30,9 @@ State state = WAITING_FOR_FIRST;
 
 // Definer hvilke pins, der bruges til rækker (outputs) og kolonner (inputs)
 // Juster disse pin-numre til din hardwareopsætning
-const uint rowPins[numRows] = {0, 1, 2, 3, 4, 5, 6, 7};
-const uint colPins[numCols] = {8, 9, 10, 11, 12, 13, 14, 15};
-const uint colPins_light[numCols] = {16, 17, 18, 19, 20, 21, 22, 23};
+const uint rowPins[numRows] = {16, 15, 14, 13, 12, 11, 10, 1};
+const uint colPins[numCols] = {27, 22, 20, 18, 8, 6, 4, 2};
+const uint colPins_light[numCols] = {28, 26, 21, 19, 9, 7, 5, 3};
 
 // Funktion til at initialisere alle pins
 void initPins() {
@@ -162,7 +162,7 @@ int main() {
         printf("\n");
         
         // Vent et stykke mellem scanninger
-        sleep_ms(500);
+        sleep_ms(5000);
     }
     
     return 0;
