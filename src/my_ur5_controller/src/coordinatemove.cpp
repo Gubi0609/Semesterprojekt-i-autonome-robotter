@@ -479,6 +479,7 @@ int main(int argc, char** argv)
     // Create chess white storage system
     auto white_storage_cor = create_dynamic_loc_storage(poses[1], 2, 8);
     auto white_storage_cor_up = create_dynamic_loc_storage(poses[4], 2, 8);
+    //auto black_storage_cor = create_dynamic_loc_storage(poses[2], 2, 8);
     auto white_storage = create_dynamic_chess_storage(2, 8);
     // Create chess black storage system
     auto black_storage_cor_up = create_dynamic_loc_storage(poses[2], 2, 8);
@@ -492,12 +493,6 @@ int main(int argc, char** argv)
     StockfishLinux engine("/home/magnusm/ur5_ws/src/my_ur5_controller/src/stockfish-android-armv8", 3);
     //#endif
     
-    //To get tool flange location
-    //rosrun tf tf_echo /base_link /tool0
-
-
-    //Gripper control
-    
     const char* port = "/dev/ttyACM0";  // Adjust this to your serial port device.
     SerialPort serial;
 
@@ -507,9 +502,12 @@ int main(int argc, char** argv)
 
     std::cout << "Serial port opened successfully." << std::endl;
 
-    serial.sendlegalmoves(engine.getLegalMoves());
+    //To get tool flange location
+    //rosrun tf tf_echo /base_link /tool0
 
 
+    //Gripper control
+    
     serial.openGripper();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     serial.closeGripper();
@@ -525,6 +523,8 @@ int main(int argc, char** argv)
     Handle game ending, this happens when there are no legal moves left
     Handle illegal moves
     Gripper control in modify storage function
+    en passa move
+    Ret robottens start position
 
     Getbestmove function, castling e1c1/e1g1
 
@@ -554,12 +554,12 @@ int main(int argc, char** argv)
         print_storage(black_storage);
         
 
-        while(true)
+        while(false)
         {
-            serial.sendlegalmoves(engine.getLegalMoves());
-            target=serial.movefrompico(); //cin >> target;
+            std::vector<std::string> legalMoves = engine.getLegalMoves();
+            serial.sendlegalmoves(legalMoves);
+            string target=serial.movefrompico(); //cin >> target;
             std::cout << "Data received from port: " << target << std::endl;
-
         }
 
         /*
@@ -628,9 +628,10 @@ int main(int argc, char** argv)
 
         if (is_players_turn) //Same as (is_player_turn == true)
         {
-            serial.sendlegalmoves(engine.getLegalMoves());
-            std::cout << "Enter piece pick and place location: <a1e2>";
-            target=serial.movefrompico(); //cin >> target;
+            std::vector<std::string> legalMoves = engine.getLegalMoves();
+            serial.sendlegalmoves(legalMoves);
+            cout << "Make move" << endl;
+            target=serial.movefrompico(); //cin >> target; to play by computer
             std::cout << "Data received from port: " << target << std::endl;
 
             //std::cin >> target;
@@ -640,11 +641,10 @@ int main(int argc, char** argv)
         }
         else
         {
-            bestmove = engine.getBestMove();
+            cout << "Computer executing move" << endl;
+            target = engine.getBestMove();
             std::cout << "Best move: " << bestmove << std::endl;
-            target = bestmove;
             engine.appendMovesMade(target);
-            serial.sendlegalmoves(engine.getLegalMoves());
             is_players_turn = true;
             std::cout << "Player's turn " << is_players_turn << std::endl;
         }
@@ -654,6 +654,16 @@ int main(int argc, char** argv)
         //std::cin >> target;
         //std::vector<std::string> result = split(target);
 
+        //std::vector<std::string> legalMoves = engine.getLegalMoves();
+        
+        //serial.sendlegalmoves(legalMoves);
+
+        //string target = serial.movefrompico();
+        
+        //Spiller move er target
+
+
+
         //Tell stockfish the move that was made
         //engine.appendMovesMade(target);
 
@@ -661,7 +671,7 @@ int main(int argc, char** argv)
         //std::string bestmove = engine.getBestMove();
         //std::cout << "Best move: " << bestmove << std::endl;
 
-
+        cout << "Print" << target << std::endl;
         std::vector<std::string> result = split(target);
 
         cout << "Result: " << result[0] << " " << result[1] << std::endl;
@@ -671,6 +681,7 @@ int main(int argc, char** argv)
 
         if (chess_board_pieces[row2][col2] != "" && is_players_turn == true) // && is_player_turn == true
         {
+
             std::cout << "Piece already exists in target cell: " << result[1] << std::endl;
             //Moving to pick up
             move_to_pose(move_group, grid_move[col2][row2]);
@@ -686,7 +697,7 @@ int main(int argc, char** argv)
                 col2, 
                 chess_board_pieces, 
                 move_group
-            );
+            );            
             move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
             //ros::Duration(2.0).sleep();
             //moving to place
@@ -714,6 +725,7 @@ int main(int argc, char** argv)
         }
         else if(chess_board_pieces[row2][col2] != "" && is_players_turn == false)
         {
+            cout << "Player is executing move, updating chessboard" << endl;
             cout << "Piece already exists in target cell: " << result[1] << endl;
             //move to storage
             modify_robotpieces_storage(
@@ -733,6 +745,7 @@ int main(int argc, char** argv)
         }
         else if(chess_board_pieces[row2][col2] == "" && is_players_turn == false)
         {
+            cout << "Player is executing move, updating chessboard" << endl;
             cout << "Player moving piece from " << result[0] << " to " << result[1] << endl;
             move_chess_piece_viz(chess_board_pieces, row, col, row2, col2);
         }
@@ -743,7 +756,9 @@ int main(int argc, char** argv)
         }
         
     }
+
     ROS_INFO("Movement complete!");
     ros::shutdown();
     return 0;
+
 }
