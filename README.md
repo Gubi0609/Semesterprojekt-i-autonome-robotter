@@ -23,10 +23,10 @@ Placeholder kommando
 ```
 
 ---
-Alle filerne (med undtagelse af "stockfish-ubuntu-x86-64-sse41-popcnt") tilhører Gruppe 3 og dets medlemmer.
-
 #### Stockfish er anskaffet fra:
 [Stockfish Download](https://stockfishchess.org/download/)
+
+Alle filerne (med undtagelse af "stockfish-ubuntu-x86-64-sse41-popcnt") tilhører Gruppe 3 og dets medlemmer.
 
 Alt brug og distribution af filerne i dette repository skal ske i henhold med skriftlig aftale med de øvrige gruppemedlemmer.
 
