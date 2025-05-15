@@ -32,7 +32,7 @@ int main() {
    
     const uint BTN1 = 9;  
     const uint BTN2 = 12; 
-    const uint BTN3 = 13; 
+
 
     gpio_init(BTN1);
     gpio_set_dir(BTN1, GPIO_IN);
@@ -42,9 +42,6 @@ int main() {
     gpio_set_dir(BTN2, GPIO_IN);
     gpio_pull_down(BTN2);
 
-    gpio_init(BTN3);
-    gpio_set_dir(BTN3, GPIO_IN);
-    gpio_pull_down(BTN3);
 
     while (true) {
         pwm_set_chan_level(slice_num, PWM_CHAN_A, 0);
@@ -54,19 +51,24 @@ int main() {
         if (gpio_get(BTN1)) {
             // When BTN1 is pressed
             pwm_set_chan_level(slice_num, PWM_CHAN_A, 0);
-            pwm_set_chan_level(slice_num, PWM_CHAN_B, 500);
-            sleep_ms(500);
+            pwm_set_chan_level(slice_num, PWM_CHAN_B, 200);
+            sleep_ms(700);
         }
         else if (gpio_get(BTN2)) {
             // When BTN2 is pressed
-            pwm_set_chan_level(slice_num, PWM_CHAN_A, 500);
+            pwm_set_chan_level(slice_num, PWM_CHAN_A, 200);
             pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
-            sleep_ms(200);
-            while (!gpio_get(BTN3) && adc_read() < 1550) {
-                sleep_ms(10);
+            sleep_ms(350);
+            while (adc_read() < 920) {
+                sleep_ms(5);
             }
         }
     }
 
     return 0;
 }
+// en måde at logge
+// logge med tid
+// far adc værdi til strøm
+// skal være 24v
+// andre målinger 

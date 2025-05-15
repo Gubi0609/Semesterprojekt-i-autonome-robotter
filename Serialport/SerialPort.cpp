@@ -141,3 +141,8 @@ bool SerialPort::closeGripper() {
 bool SerialPort::openGripper() {
     return writeData('0');
 }
+
+// Sends the command to open the gripper (writes '0').
+bool SerialPort::stopGripper() {
+    return writeData('2');
+}

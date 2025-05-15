@@ -24,14 +24,16 @@ int main() {
             serial.closeGripper();
         } else if (command == "opengripper") {
             serial.openGripper();
+        } else if (command == "stopgripper") {
+            serial.stopGripper();
         } else if (command == "read") {
             std::cout << "Received: " << serial.readData() << std::endl;
         } else if (command == "legal") {
             // Example legal moves.
             std::vector<std::string> moves = {"e2e4", "d2d4", "g1f3"};
-            serial.sendLegalMoves(moves);
+            serial.sendlegalmoves(moves);
         } else if (command == "move") {
-            std::string move = serial.moveFromPico();
+            std::string move = serial.movefrompico();
             std::cout << "Move from pico: " << move << std::endl;
         } else {
             std::cout << "Unknown command!" << std::endl;

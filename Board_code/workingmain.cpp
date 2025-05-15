@@ -93,13 +93,6 @@ const uint colPins_light[numCols] = {28, 26, 21, 19, 9, 7, 5, 3};
 
 // Function to initialize all pins
 void initPins() {
-    gpio_init(0);
-    gpio_set_dir(0, GPIO_OUT);
-    gpio_put(0, 0);
-    gpio_init(17);
-    gpio_set_dir(17, GPIO_OUT);
-    gpio_put(17, 0);
-
     // Initialize row pins as outputs and set them low.
     for (int i = 0; i < numRows; i++) {
         gpio_init(rowPins[i]);
@@ -136,15 +129,6 @@ void clearLights(Point matrix[numRows][numCols]) {
 }
 
 std::vector<Move> waitForMovesFromPC() {
-    sleep_ms(50);
-    for (int r = 0; r < numRows; r++) {
-        gpio_put(rowPins[r], 0);
-    }
-    gpio_put(rowPins[7], 1);
-    for (int j = 0; j < numCols; j++) {
-        gpio_put(colPins_light[j], 0);    
-    }
-
     char inputBuffer[256];
     while (true) {
         int index = 0;
@@ -158,91 +142,10 @@ std::vector<Move> waitForMovesFromPC() {
         }
         inputBuffer[index] = '\0';
         if (index > 0) {
-            for (int i = 7; i >= 1; i--) {
-                gpio_put(rowPins[i], 0);   
-                gpio_put(rowPins[i-1], 1); 
-                sleep_ms(50);
-            }
-            gpio_put(rowPins[0], 0);
-            gpio_put(rowPins[7], 0);
-            for (int j = 0; j < numCols; j++) {
-                gpio_put(colPins_light[j], 1);    
-            }
             // parse and return immediately
-            sleep_ms(50);
             return parseMoves(inputBuffer);
         }
         sleep_us(500);
-    }
-}
-void gripper() {
-    while (true){
-        int ch = getchar();
-        if (ch == '0') {
-            gpio_put(0, 1);
-            sleep_ms(50);
-            gpio_put(0, 0);
-        }
-        else if (ch == '1'){
-            gpio_put(17, 1);
-            sleep_ms(50);
-            gpio_put(17, 0);
-        }
-        else if (ch == '2'){
-            break;
-        }
-    }
-}
-
-// Scans both row 0 and 1 until both have 8 magnets placed
-void waitForInitialMagnets(Point matrix[numRows][numCols]) {
-    bool done[2] = {false, false};
-    int setup = 0;
-
-    while (!(done[0] && done[1])) {
-
-        // Scan row 0 and row 1
-        for (int row = 0; row < 2; ++row) {
-            // Ensure all light pins are HIGH (LEDs off) before activating a row
-            for (int j = 0; j < numCols; j++) {
-                gpio_put(colPins_light[j], 1);
-            }
-
-            // Set all rows LOW first.
-            for (int r = 0; r < numRows; r++) {
-                gpio_put(rowPins[r], 0);
-            }
-            
-            // Set the active row HIGH.
-            gpio_put(rowPins[row], 1);
-            
-            int count = 0;
-            sleep_us(100);
-            for (int col = 0; col < numCols; ++col) {
-                setup++;
-                // Control LED based on the matrix point's light status.
-                if (matrix[row][col].lys == true) {
-                    gpio_put(colPins_light[col], 0);
-                } else {
-                    gpio_put(colPins_light[col], 1);
-                }
-
-                sleep_us(200);  // Short delay for signal stabilization.
-
-                matrix[row][col].current = gpio_get(colPins[col]);
-                // GPIO low (0) = LED on, high (1) = LED off
-                if (matrix[row][col].current == 1) {
-                    matrix[row][col].lys = false;
-                }
-                else{matrix[row][col].lys = true;}
-
-                if (!matrix[row][col].lys) ++count;
-            }
-            // Deselect
-            gpio_put(rowPins[row], 0);
-            if (count >= numCols && setup > 17) done[row] = true;
-            else {done[row] = false;}
-        }
     }
 }
 
@@ -259,16 +162,82 @@ int main() {
             matrix[i][j].col = j;  // file
             matrix[i][j].current = 0;
             matrix[i][j].last = 0;
-            matrix[i][j].lys = false;
+            matrix[i][j].lys = true;
         }
     }
     
+
+        // … after moves = waitForMovesFromPC();
+
+    // Wait for you to place magnets on row 0
+    {
+        int done = 0;
+        while (done < 8) {            // wait until all 8 switches see a magnet
+            done = 0;
+            gpio_put(rowPins[0], 1);  // select row 0
+
+            for (int col = 0; col < numCols; col++) {
+                sleep_us(500);       // settle
+
+                // 1) read the reed switch
+                matrix[0][col].current = gpio_get(colPins[col]);
+
+                // 2) assign lys (magnet closed → current==1 → light off)
+                if (matrix[0][col].current == 1) {
+                    matrix[0][col].lys = false;
+                } else {
+                    matrix[0][col].lys = true;
+                }
+                matrix[0][col].current == 0;
+
+                // 3) immediately drive the LED
+                gpio_put(colPins_light[col],
+                         matrix[0][col].lys ? 0 : 1);
+
+                // 4) count how many have gone “off”
+                if (!matrix[0][col].lys) {
+                    done++;
+                }
+            }
+
+            gpio_put(rowPins[0], 0);  // deselect row 0
+        }
+    }
+
+    // Wait for you to place magnets on row 1
+    {
+        int done = 0;
+        while (done < 8) {            // again, all 8 switches
+            done = 0;
+            gpio_put(rowPins[1], 1);  // select row 1
+
+            for (int col = 0; col < numCols; col++) {
+                sleep_us(500);
+
+                matrix[1][col].current = gpio_get(colPins[col]);
+
+                if (matrix[1][col].current == 1) {
+                    matrix[1][col].lys = false;
+                } else {
+                    matrix[1][col].lys = true;
+                }
+                matrix[1][col].current == 0;
+
+                gpio_put(colPins_light[col],
+                         matrix[1][col].lys ? 0 : 1);
+
+                if (!matrix[1][col].lys) {
+                    done++;
+                }
+            }
+
+            gpio_put(rowPins[1], 0);
+        }
+    }
+
     // … and now you can drop into your normal scan loop
-    // Wait for magnets on rows 0 and 1
-    gripper();
-    waitForInitialMagnets(matrix);
+
     moves = waitForMovesFromPC();
-    waitForInitialMagnets(matrix);
     clearLights(matrix);
 
     while (true) {
@@ -327,7 +296,6 @@ int main() {
                             Move movemade = {{first_col, first_row}, {second_col, second_row}};
                             std::string movetosend = moveToString(movemade);
                             printf("%s", movetosend.c_str());
-                            gripper();
                             moves = waitForMovesFromPC();
                             state = 1;
                             runs = 0;

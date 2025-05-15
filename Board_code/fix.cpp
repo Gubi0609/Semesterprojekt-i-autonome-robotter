@@ -158,7 +158,7 @@ std::vector<Move> waitForMovesFromPC() {
         }
         inputBuffer[index] = '\0';
         if (index > 0) {
-            for (int i = 7; i >= 1; i--) {
+            for (int i = 7; i >= 0; i--) {
                 gpio_put(rowPins[i], 0);   
                 gpio_put(rowPins[i-1], 1); 
                 sleep_ms(50);
@@ -176,21 +176,16 @@ std::vector<Move> waitForMovesFromPC() {
     }
 }
 void gripper() {
-    while (true){
-        int ch = getchar();
-        if (ch == '0') {
-            gpio_put(0, 1);
-            sleep_ms(50);
-            gpio_put(0, 0);
-        }
-        else if (ch == '1'){
-            gpio_put(17, 1);
-            sleep_ms(50);
-            gpio_put(17, 0);
-        }
-        else if (ch == '2'){
-            break;
-        }
+    int ch = getchar();
+    if (ch == '0') {
+        gpio_put(0, 1);
+        sleep_ms(50);
+        gpio_put(0, 0);
+    }
+    else if (ch == '1'){
+        gpio_put(15, 1);
+        sleep_ms(50);
+        gpio_put(15, 0);
     }
 }
 
@@ -265,7 +260,6 @@ int main() {
     
     // … and now you can drop into your normal scan loop
     // Wait for magnets on rows 0 and 1
-    gripper();
     waitForInitialMagnets(matrix);
     moves = waitForMovesFromPC();
     waitForInitialMagnets(matrix);
@@ -327,7 +321,8 @@ int main() {
                             Move movemade = {{first_col, first_row}, {second_col, second_row}};
                             std::string movetosend = moveToString(movemade);
                             printf("%s", movetosend.c_str());
-                            gripper();
+                            // gripper();
+                            // gripper();
                             moves = waitForMovesFromPC();
                             state = 1;
                             runs = 0;

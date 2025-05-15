@@ -25,47 +25,58 @@ int main() {
 
     uint slice_num = pwm_gpio_to_slice_num(PWM_PIN_A);
     pwm_config config = pwm_get_default_config();
+    // 125 MHz / 125 → 1 MHz counter; wrap = 999 → 1 kHz PWM
     pwm_config_set_clkdiv(&config, 125.0f);
     pwm_config_set_wrap(&config, 999);
     pwm_init(slice_num, &config, true);
 
-   
-    const uint BTN1 = 9;  
-    const uint BTN2 = 12; 
-    const uint BTN3 = 13; 
+    // --- Button pins (just examples, change to your wiring) ---
+    const uint PIN_ACTIVE_BTN = 9;  // Start/enable button
+    const uint PIN_LOGIC_BTN  = 10;  // Logic direction button
+    const uint PIN_STOP_BTN   = 11;  // Emergency stop button
 
-    gpio_init(BTN1);
-    gpio_set_dir(BTN1, GPIO_IN);
-    gpio_pull_down(BTN1);
+    gpio_init(PIN_ACTIVE_BTN);
+    gpio_set_dir(PIN_ACTIVE_BTN, GPIO_IN);
+    gpio_pull_down(PIN_ACTIVE_BTN);
 
-    gpio_init(BTN2);
-    gpio_set_dir(BTN2, GPIO_IN);
-    gpio_pull_down(BTN2);
+    gpio_init(PIN_LOGIC_BTN);
+    gpio_set_dir(PIN_LOGIC_BTN, GPIO_IN);
+    gpio_pull_down(PIN_LOGIC_BTN);
 
-    gpio_init(BTN3);
-    gpio_set_dir(BTN3, GPIO_IN);
-    gpio_pull_down(BTN3);
+    gpio_init(PIN_STOP_BTN);
+    gpio_set_dir(PIN_STOP_BTN, GPIO_IN);
+    gpio_pull_down(PIN_STOP_BTN);
+
 
     while (true) {
         pwm_set_chan_level(slice_num, PWM_CHAN_A, 0);
         pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
         sleep_ms(10);
 
-        if (gpio_get(BTN1)) {
-            // When BTN1 is pressed
+        // uint16_t raw = adc_read();
+        // printf("%u\n", raw);
+
+        if (gpio_get(PIN_ACTIVE_BTN)) {
+            sleep_ms(100);
+            if (gpio_get(PIN_LOGIC_BTN)) {
             pwm_set_chan_level(slice_num, PWM_CHAN_A, 0);
             pwm_set_chan_level(slice_num, PWM_CHAN_B, 500);
             sleep_ms(500);
-        }
-        else if (gpio_get(BTN2)) {
-            // When BTN2 is pressed
-            pwm_set_chan_level(slice_num, PWM_CHAN_A, 500);
-            pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
-            sleep_ms(200);
-            while (!gpio_get(BTN3) && adc_read() < 1550) {
-                sleep_ms(10);
+
             }
+            else {
+                pwm_set_chan_level(slice_num, PWM_CHAN_A, 500);
+                pwm_set_chan_level(slice_num, PWM_CHAN_B, 0);
+                sleep_ms(200);
+                while (!gpio_get(PIN_STOP_BTN) && adc_read() < 1500){
+                    sleep_ms(10);
+                }
+                
+            }
+        
         }
+
+
     }
 
     return 0;
