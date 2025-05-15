@@ -13,7 +13,7 @@ Alt den relevante kode til semesterprojektet på 2. semester af Civilingenør i 
 - Ubuntu 20
 
 #### Nødvendige programmer og biblioteker:
-- ROS
+- ROS Noetic
 - RViz
 - wxWidgets
 
