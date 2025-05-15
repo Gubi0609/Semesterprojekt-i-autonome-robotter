@@ -25,7 +25,7 @@ wx-config --version
 Skulle gerne vise (eller lignende):
 ```
 3.2.4
-``
+```
 
 ### For at compile:
 ```
