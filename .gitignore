@@ -1,5 +1,5 @@
 # Ignore build folders as build is individual for each machine
-build/
+**/build/
 
 # Ignore IDE folders
 .vs/
