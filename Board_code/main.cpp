@@ -86,7 +86,6 @@ std::vector<Move> moves;
 int state = 1;
 
 // Define pins for rows (outputs) and columns (inputs)
-// Adjust these pin numbers to your hardware setup.
 const uint rowPins[numRows] = {16, 15, 14, 13, 12, 11, 10, 1};
 const uint colPins[numCols] = {27, 22, 20, 18, 8, 6, 4, 2};
 const uint colPins_light[numCols] = {28, 26, 21, 19, 9, 7, 5, 3};
@@ -140,12 +139,12 @@ std::vector<Move> waitForMovesFromPC() {
     for (int r = 0; r < numRows; r++) {
         gpio_put(rowPins[r], 0);
     }
-    gpio_put(rowPins[7], 1);
+    gpio_put(rowPins[6], 1);
     for (int j = 0; j < numCols; j++) {
         gpio_put(colPins_light[j], 0);    
     }
 
-    char inputBuffer[256];
+    char inputBuffer[512];
     while (true) {
         int index = 0;
         // block until newline…
@@ -158,13 +157,13 @@ std::vector<Move> waitForMovesFromPC() {
         }
         inputBuffer[index] = '\0';
         if (index > 0) {
-            for (int i = 7; i >= 1; i--) {
+            for (int i = 6; i >= 1; i--) {
                 gpio_put(rowPins[i], 0);   
                 gpio_put(rowPins[i-1], 1); 
                 sleep_ms(50);
             }
             gpio_put(rowPins[0], 0);
-            gpio_put(rowPins[7], 0);
+            gpio_put(rowPins[6], 0);
             for (int j = 0; j < numCols; j++) {
                 gpio_put(colPins_light[j], 1);    
             }
@@ -176,6 +175,16 @@ std::vector<Move> waitForMovesFromPC() {
     }
 }
 void gripper() {
+
+    sleep_ms(5);
+    for (int r = 0; r < numRows; r++) {
+        gpio_put(rowPins[r], 0);
+    }
+    gpio_put(rowPins[7], 1);
+    for (int j = 0; j < numCols; j++) {
+        gpio_put(colPins_light[j], 0);    
+    }
+
     while (true){
         int ch = getchar();
         if (ch == '0') {
@@ -191,6 +200,12 @@ void gripper() {
         else if (ch == '2'){
             break;
         }
+        sleep_ms(1);
+    }
+
+    gpio_put(rowPins[7], 0);
+    for (int j = 0; j < numCols; j++) {
+        gpio_put(colPins_light[j], 1);    
     }
 }
 
@@ -227,7 +242,7 @@ void waitForInitialMagnets(Point matrix[numRows][numCols]) {
                     gpio_put(colPins_light[col], 1);
                 }
 
-                sleep_us(200);  // Short delay for signal stabilization.
+                sleep_us(200); 
 
                 matrix[row][col].current = gpio_get(colPins[col]);
                 // GPIO low (0) = LED on, high (1) = LED off
@@ -265,8 +280,9 @@ int main() {
     
     // … and now you can drop into your normal scan loop
     // Wait for magnets on rows 0 and 1
-    gripper();
+    // gripper();
     waitForInitialMagnets(matrix);
+    gripper();
     moves = waitForMovesFromPC();
     waitForInitialMagnets(matrix);
     clearLights(matrix);

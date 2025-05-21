@@ -1,129 +1,128 @@
-#include <stdio.h>
+#include <cstdio>
+#include <vector>
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
+#include "hardware/gpio.h"
 #include "hardware/pwm.h"
-#include "pico_lfs.h"
-#include "lfs.h"
+#include "hardware/timer.h"
 
-// ——— CONFIG ———
-#define BTN1            9       // close grip
-#define BTN2           12       // open grip
-#define ADC_PIN        27
-#define SAMPLE_DT       5       // ms between samples
-#define MAX_SAMPLES   200       // ~1 s @ 5 ms
-#define ADC_THRESHOLD 920       // stop condition
-
-// ——— SAMPLE BUFFER ———
-typedef struct {
-    uint32_t t_ms;
-    uint16_t raw;
-} sample_t;
-static sample_t samples[MAX_SAMPLES];
-static size_t    sample_count;
-
-// ——— LittleFS objects ———
-static struct lfs_config *lfs_cfg;
-static lfs_t lfs;
-static lfs_file_t logfile;
-
-// initialize flash FS
-void fs_init() {
-    lfs_cfg = pico_lfs_init(0x10100000, 0x00100000);
-    if (lfs_mount(&lfs, lfs_cfg) != LFS_ERR_OK) {
-        lfs_format(&lfs, lfs_cfg);
-        lfs_mount(&lfs, lfs_cfg);
-    }
-    lfs_file_open(&lfs, &logfile, "log.csv",
-                  LFS_O_CREAT | LFS_O_APPEND | LFS_O_WRONLY);
-}
-
-// dump the in‐RAM samples to flash
-void dump_samples() {
-    char buf[32];
-    for (size_t i = 0; i < sample_count; ++i) {
-        int n = snprintf(buf, sizeof(buf), "%u,%u\n",
-                         samples[i].t_ms, samples[i].raw);
-        lfs_file_write(&logfile, buf, n);
-    }
-    lfs_file_sync(&logfile);
-}
-
-// record one cycle up to max_duration_ms, but stop early if ADC ≥ threshold
-void record_cycle(uint32_t max_duration_ms, int pwm_chan, uint16_t pwm_level) {
-    // start motion
-    pwm_set_chan_level(pwm_gpio_to_slice_num(0), pwm_chan, pwm_level);
-    uint32_t t0 = to_ms_since_boot(get_absolute_time());
-    sample_count = 0;
-
-    while (true) {
-        uint32_t now = to_ms_since_boot(get_absolute_time());
-        // read ADC once per iteration
-        uint16_t raw = adc_read();
-
-        // break if either time is up, buffer is full, or threshold reached
-        if (now - t0 >= max_duration_ms ||
-            sample_count >= MAX_SAMPLES ||
-            raw >= ADC_THRESHOLD) {
-            // record this last sample if it crossed threshold
-            samples[sample_count++] = (sample_t){ .t_ms = now - t0, .raw = raw };
-            break;
-        }
-
-        // otherwise, store sample
-        samples[sample_count++] = (sample_t){ .t_ms = now - t0, .raw = raw };
-        sleep_ms(SAMPLE_DT);
-    }
-
-    // stop motion and dump
-    pwm_set_chan_level(pwm_gpio_to_slice_num(0), pwm_chan, 0);
-    dump_samples();
-}
+struct CloseEvent {
+    uint32_t start_ms;
+    uint32_t end_ms;
+    std::vector<uint16_t> samples;
+};
 
 int main() {
-    stdio_init_all();
+    stdio_init_all();  // USB-CDC
+
+    // ADC on GPIO27 (ADC1)
     adc_init();
-    adc_gpio_init(ADC_PIN);
-    adc_select_input(ADC_PIN - 26);
+    adc_gpio_init(27);
+    adc_select_input(1);
 
-    // buttons
-    for (int b : (int[]){BTN1, BTN2, -1}) {
-        if (b < 0) break;
-        gpio_init(b);
-        gpio_set_dir(b, GPIO_IN);
-        gpio_pull_down(b);
-    }
+    // LED on GPIO8 (status indicator)
+    const uint PIN_LED = 8;
+    gpio_init(PIN_LED);
+    gpio_set_dir(PIN_LED, GPIO_OUT);
+    gpio_put(PIN_LED, 1);
 
-    // PWM setup
-    const uint PWM_A = 0, PWM_B = 1;
-    gpio_set_function(PWM_A, GPIO_FUNC_PWM);
-    gpio_set_function(PWM_B, GPIO_FUNC_PWM);
+    // PWM setup for gripper motor (slice 0)
+    const uint PWM_PIN_A = 0;
+    const uint PWM_PIN_B = 1;
+    gpio_set_function(PWM_PIN_A, GPIO_FUNC_PWM);
+    gpio_set_function(PWM_PIN_B, GPIO_FUNC_PWM);
+    uint slice = pwm_gpio_to_slice_num(PWM_PIN_A);
     pwm_config cfg = pwm_get_default_config();
     pwm_config_set_clkdiv(&cfg, 125.0f);
     pwm_config_set_wrap(&cfg, 999);
-    pwm_init(pwm_gpio_to_slice_num(PWM_A), &cfg, true);
+    pwm_init(slice, &cfg, true);
 
-    // mount FS + open file
-    fs_init();
-    // write header if file was just created
-    lfs_file_write(&logfile, "t_ms,adc_raw\n", 14);
-    lfs_file_sync(&logfile);
-
-    while (true) {
-        if (gpio_get(BTN1)) {
-            // close-grip: record up to 700 ms, but stop early on threshold
-            record_cycle(700, PWM_CHAN_B, 200);
-        }
-        else if (gpio_get(BTN2)) {
-            // open-grip: record up to 350 ms, but stop early on threshold
-            record_cycle(350, PWM_CHAN_A, 200);
-        }
-        else {
-            sleep_ms(10);
-        }
+    // Buttons: open (GPIO9), close (GPIO12), dump (GPIO15)
+    const uint BTN_OPEN  = 9;
+    const uint BTN_CLOSE = 12;
+    const uint BTN_DUMP  = 15;
+    for (auto btn : {BTN_OPEN, BTN_CLOSE, BTN_DUMP}) {
+        gpio_init(btn);
+        gpio_set_dir(btn, GPIO_IN);
+        gpio_pull_down(btn);  // active-high
     }
 
-    // (never reached) cleanup
-    lfs_file_close(&logfile);
-    lfs_unmount(&lfs);
+    const uint16_t THRESH     = 920;  // ADC threshold for close
+    const uint    S_INTERVAL  = 5;    // ms between ADC samples
+    std::vector<CloseEvent> log;
+
+    while (true) {
+        // --- Open gripper ---
+        if (gpio_get(BTN_OPEN)) {
+            // Drive motor to open
+            pwm_set_chan_level(slice, PWM_CHAN_A, 0);
+            pwm_set_chan_level(slice, PWM_CHAN_B, 200);
+            sleep_ms(600);
+            // Stop motor
+            pwm_set_chan_level(slice, PWM_CHAN_A, 0);
+            pwm_set_chan_level(slice, PWM_CHAN_B, 0);
+        }
+        // --- Close and log ---
+        else if (gpio_get(BTN_CLOSE)) {
+            CloseEvent ev;
+            ev.start_ms = to_ms_since_boot(get_absolute_time());
+            ev.samples.reserve(200);
+
+
+            // Drive motor to close
+            pwm_set_chan_level(slice, PWM_CHAN_A, 200);
+            pwm_set_chan_level(slice, PWM_CHAN_B,   0);
+
+
+            // just as the motor starts it has staic friction and therefor should not be able to stop
+            for (int i = 0; i < 50; ++i) {
+                ev.samples.push_back(adc_read());
+                sleep_ms(S_INTERVAL);
+            }
+
+
+            // Phase 1: sample until threshold
+            uint16_t v;
+            do {
+                v = adc_read();
+                ev.samples.push_back(v);
+                sleep_ms(S_INTERVAL);
+            } while (v < THRESH);
+
+            // Stop motor
+            pwm_set_chan_level(slice, PWM_CHAN_A, 0);
+            pwm_set_chan_level(slice, PWM_CHAN_B, 0);
+
+            // Phase 2: take 50 extra samples after threshold
+            for (int i = 0; i < 150; ++i) {
+                ev.samples.push_back(adc_read());
+                sleep_ms(S_INTERVAL);
+            }
+
+            ev.end_ms = to_ms_since_boot(get_absolute_time());
+            log.push_back(std::move(ev));
+        }
+
+        // --- Dump log to PC ---
+        else if (gpio_get(BTN_DUMP)) {
+            printf("\n=== DUMPING %zu CLOSE EVENTS ===\n", log.size());
+            for (size_t i = 0; i < log.size(); ++i) {
+                auto &e = log[i];
+                uint32_t dur = e.end_ms - e.start_ms;
+                printf("Event %zu: start=%u ms, end=%u ms, duration=%u ms, samples=%zu\n",
+                       i+1, e.start_ms, e.end_ms, dur, e.samples.size());
+                for (auto s : e.samples) {
+                    printf("%u\n", s);
+                }
+                printf("-------------------------------\n");
+            }
+            printf("=== END OF DUMP ===\n\n");
+            log.clear();
+            // Wait for release
+            while (gpio_get(BTN_DUMP)) sleep_ms(1);
+        }
+        tight_loop_contents();
+    }
     return 0;
 }
+// sudo minicom -D /dev/ttyACM0 -b 115200

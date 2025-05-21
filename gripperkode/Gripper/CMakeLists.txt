@@ -31,7 +31,7 @@ project(gripper C CXX ASM)
 # Initialiser Pico SDK
 pico_sdk_init()
 
-add_subdirectory(pico-extras)
+
 
 # Tilføj eksekverbar fil – hvis du bruger C++ skal filen hedde main.cpp,
 # eller main.c hvis du arbejder i C.
@@ -42,7 +42,8 @@ target_link_libraries(gripper
     pico_stdlib
     hardware_pwm
     hardware_adc
-    pico_lfs
+    hardware_gpio
+    hardware_timer
 )
 
 # Konfigurer standard I/O: Vælg om du vil bruge UART eller USB
