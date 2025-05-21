@@ -14,7 +14,7 @@ struct Move {
     std::pair<int, int> destination;  // (file, rank)
 };
 
-// Converts a move string (e.g., "a2a4") into a Move struct.
+// Converts a move string into a Move struct.
 Move convertMove(const std::string &moveStr) {
     if (moveStr.size() != 4) {
         return {{-1, -1}, {-1, -1}}; // Invalid move if not 4 characters.
