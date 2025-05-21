@@ -1,0 +1,6 @@
+# Ignore build folders as build is individual for each machine
+**/build/
+
+# Ignore IDE folders
+.vs/
+.vscode/
