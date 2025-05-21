@@ -278,7 +278,7 @@ int main() {
         }
     }
     
-    // … and now you can drop into your normal scan loop
+    
     // Wait for magnets on rows 0 and 1
     // gripper();
     waitForInitialMagnets(matrix);
