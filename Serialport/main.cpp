@@ -3,7 +3,7 @@
 #include "SerialPort.h"
 
 int main() {
-    const char* port = "/dev/ttyACM0";  // Adjust this to your serial port device.
+    const char* port = "/dev/ttyACM0";  
     SerialPort serial;
 
     if (serial.openSerial(port) < 0) {
