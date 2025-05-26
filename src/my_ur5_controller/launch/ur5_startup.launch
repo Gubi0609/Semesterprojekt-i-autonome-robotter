@@ -1,0 +1,13 @@
+<launch>
+  <!-- Launch the UR5 robot driver with the specified robot IP -->
+  <!-- Launch by writting: roslaunch my_ur5_controller ur5_startup.launch-->
+  <include file="$(find ur_robot_driver)/launch/ur5_bringup.launch">
+    <arg name="robot_ip" value="192.168.1.54"/>
+  </include>
+
+  <!-- Launch the MoveIt! planning execution -->
+  <include file="$(find ur5_moveit_config)/launch/moveit_planning_execution.launch"/>
+
+  <!-- Launch the RViz configuration for MoveIt! -->
+  <include file="$(find ur5_moveit_config)/launch/moveit_rviz.launch"/>
+</launch>

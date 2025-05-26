@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>my_ur5_controller</name>
+  <version>0.0.0</version>
+  <description>The my_ur5_controller package</description>
+
+  <maintainer email="magnusm@todo.todo">magnusm</maintainer>
+  <license>TODO</license>
+
+  <!-- Build tool -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Core build dependencies -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>moveit_core</build_depend>
+  <build_depend>moveit_ros_planning_interface</build_depend>
+  <build_depend>moveit_ros_planning</build_depend>
+  <build_depend>trajectory_processing</build_depend>
+
+  <!-- Export build dependencies -->
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+  <build_export_depend>moveit_core</build_export_depend>
+  <build_export_depend>moveit_ros_planning_interface</build_export_depend>
+  <build_export_depend>moveit_ros_planning</build_export_depend>
+  <build_export_depend>trajectory_processing</build_export_depend>
+
+  <!-- Runtime dependencies -->
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>moveit_core</exec_depend>
+  <exec_depend>moveit_ros_planning_interface</exec_depend>
+  <exec_depend>moveit_ros_planning</exec_depend>
+  <exec_depend>trajectory_processing</exec_depend>
+
+  <!-- Optional tools like launch -->
+  <build_depend>launch</build_depend>
+  <exec_depend>launch</exec_depend>
+
+  <export>
+  </export>
+</package>
