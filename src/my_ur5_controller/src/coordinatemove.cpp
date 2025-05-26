@@ -715,25 +715,7 @@ int main(int argc, char** argv)
 
     //Missing features:
     /*
-    Choose first player and thereby rotate or not the frames !DONE!
-    How does stockfish make the first move and how do i tell it what color it is? !DONE!
-    When the player decommisions computers pieces, create function for filling computer storage !DONE!
-    Handle promotions, retrieve from storage !DONE!
-
-    Flyt 1 felt brættet mod magne gruppen( 5 cm på x aksen, også på white storage)
-    Handle castling 
-    Handle game ending, this happens when there are no legal moves left
-
-    Handle illegal moves
-    Gripper control in modify storage function
-    empassant move
-    Ret robottens start position
-    Add a queen to the start of each storage
-
-    Lav trajectory graf
-
-    Getbestmove function, castling e1c1/e1g1/e8g8/e8c8
-
+    Handle game ending and player promotion
     */
 
 
@@ -774,12 +756,6 @@ int main(int argc, char** argv)
             string target=serial.movefrompico(); //cin >> target;
             std::cout << "Data received from port: " << target << std::endl;
         }
-
-        //serial.closeGripper();
-        //std::this_thread::sleep_for(std::chrono::seconds(2));
-        //serial.openGripper();
-        //std::this_thread::sleep_for(std::chrono::seconds(2));
-        //serial.openGripper();
 
         while(false)
         {
@@ -872,28 +848,6 @@ int main(int argc, char** argv)
             is_players_turn = true;
             std::cout << "Player's turn " << is_players_turn << std::endl;
         }
-
-        //std::string target;
-        //std::cout << "Enter piece pick and place location: <a1e2>";
-        //std::cin >> target;
-        //std::vector<std::string> result = split(target);
-
-        //std::vector<std::string> legalMoves = engine.getLegalMoves();
-        
-        //serial.sendlegalmoves(legalMoves);
-
-        //string target = serial.movefrompico();
-        
-        //Spiller move er target
-
-
-
-        //Tell stockfish the move that was made
-        //engine.appendMovesMade(target);
-
-        //Get the move from stockfish
-        //std::string bestmove = engine.getBestMove();
-        //std::cout << "Best move: " << bestmove << std::endl;
 
         cout << "Print" << target << std::endl;
         std::vector<std::string> result = split(target);
