@@ -47,7 +47,7 @@ int main() {
         gpio_pull_down(btn);  // active-high
     }
 
-    const uint16_t THRESH     = 920;  // ADC threshold for close
+    const uint16_t THRESH     = 2233;  // ADC threshold for close
     const uint    S_INTERVAL  = 5;    // ms between ADC samples
     std::vector<CloseEvent> log;
 
